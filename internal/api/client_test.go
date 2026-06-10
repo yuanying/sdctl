@@ -147,6 +147,45 @@ func TestSetModel(t *testing.T) {
 	}
 }
 
+func TestTxt2ImgWithBatch(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var body map[string]interface{}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Errorf("failed to decode body: %v", err)
+		}
+		if v, ok := body["n_iter"].(float64); !ok || v != 3 {
+			t.Errorf("expected n_iter 3, got %v", body["n_iter"])
+		}
+		if v, ok := body["batch_size"].(float64); !ok || v != 2 {
+			t.Errorf("expected batch_size 2, got %v", body["batch_size"])
+		}
+		images := make([]string, 6)
+		for i := range images {
+			images[i] = "base64image"
+		}
+		resp := api.GenerateResponse{Images: images}
+		json.NewEncoder(w).Encode(resp)
+	}))
+	defer server.Close()
+
+	client := api.NewClient(server.URL)
+	req := api.Txt2ImgRequest{
+		Prompt:     "a cat",
+		Steps:      20,
+		Width:      512,
+		Height:     512,
+		BatchCount: 3,
+		BatchSize:  2,
+	}
+	resp, err := client.Txt2Img(req)
+	if err != nil {
+		t.Fatalf("Txt2Img failed: %v", err)
+	}
+	if len(resp.Images) != 6 {
+		t.Errorf("expected 6 images, got %d", len(resp.Images))
+	}
+}
+
 func TestConnectionError(t *testing.T) {
 	client := api.NewClient("http://localhost:1")
 	_, err := client.ListModels()

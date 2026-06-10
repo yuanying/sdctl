@@ -25,6 +25,8 @@ var img2imgFlags struct {
 	sampler           string
 	seed              int64
 	denoisingStrength float64
+	batchCount        int
+	batchSize         int
 	output            string
 }
 
@@ -38,12 +40,18 @@ func init() {
 	f.StringVar(&img2imgFlags.sampler, "sampler", "Euler a", "sampler name")
 	f.Int64Var(&img2imgFlags.seed, "seed", -1, "seed (-1 for random)")
 	f.Float64Var(&img2imgFlags.denoisingStrength, "denoising", 0.75, "denoising strength (0.0-1.0)")
+	f.IntVar(&img2imgFlags.batchCount, "batch-count", 1, "number of times to run generation")
+	f.IntVar(&img2imgFlags.batchSize, "batch-size", 1, "number of images per batch")
 	f.StringVarP(&img2imgFlags.output, "output", "o", "", "output file or directory")
 
 	rootCmd.AddCommand(img2imgCmd)
 }
 
 func runImg2Img(cmd *cobra.Command, args []string) error {
+	if err := validateOutputForBatch(img2imgFlags.output, img2imgFlags.batchCount, img2imgFlags.batchSize); err != nil {
+		return err
+	}
+
 	imageData, err := os.ReadFile(args[1])
 	if err != nil {
 		return fmt.Errorf("error: cannot read image %s: %w", args[1], err)
@@ -59,6 +67,8 @@ func runImg2Img(cmd *cobra.Command, args []string) error {
 			CFGScale:       img2imgFlags.cfgScale,
 			SamplerName:    img2imgFlags.sampler,
 			Seed:           img2imgFlags.seed,
+			BatchCount:     img2imgFlags.batchCount,
+			BatchSize:      img2imgFlags.batchSize,
 		},
 		InitImages:        []string{base64.StdEncoding.EncodeToString(imageData)},
 		DenoisingStrength: img2imgFlags.denoisingStrength,
@@ -73,10 +83,12 @@ func runImg2Img(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("error: %w", err)
 	}
 
-	path, err := saveImage(resp.Images[0], img2imgFlags.output)
+	paths, err := saveImages(resp.Images, img2imgFlags.output)
 	if err != nil {
 		return fmt.Errorf("error: %w", err)
 	}
-	fmt.Println(path)
+	for _, p := range paths {
+		fmt.Println(p)
+	}
 	return nil
 }
