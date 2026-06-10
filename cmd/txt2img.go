@@ -22,6 +22,8 @@ var txt2imgFlags struct {
 	cfgScale       float64
 	sampler        string
 	seed           int64
+	batchCount     int
+	batchSize      int
 	output         string
 }
 
@@ -34,12 +36,18 @@ func init() {
 	f.Float64Var(&txt2imgFlags.cfgScale, "cfg-scale", 7.0, "CFG scale")
 	f.StringVar(&txt2imgFlags.sampler, "sampler", "Euler a", "sampler name")
 	f.Int64Var(&txt2imgFlags.seed, "seed", -1, "seed (-1 for random)")
+	f.IntVar(&txt2imgFlags.batchCount, "batch-count", 1, "number of times to run generation")
+	f.IntVar(&txt2imgFlags.batchSize, "batch-size", 1, "number of images per batch")
 	f.StringVarP(&txt2imgFlags.output, "output", "o", "", "output file or directory")
 
 	rootCmd.AddCommand(txt2imgCmd)
 }
 
 func runTxt2Img(cmd *cobra.Command, args []string) error {
+	if err := validateOutputForBatch(txt2imgFlags.output, txt2imgFlags.batchCount, txt2imgFlags.batchSize); err != nil {
+		return err
+	}
+
 	req := api.Txt2ImgRequest{
 		Prompt:         args[0],
 		NegativePrompt: txt2imgFlags.negativePrompt,
@@ -49,6 +57,8 @@ func runTxt2Img(cmd *cobra.Command, args []string) error {
 		CFGScale:       txt2imgFlags.cfgScale,
 		SamplerName:    txt2imgFlags.sampler,
 		Seed:           txt2imgFlags.seed,
+		BatchCount:     txt2imgFlags.batchCount,
+		BatchSize:      txt2imgFlags.batchSize,
 	}
 
 	stop := make(chan struct{})
@@ -60,10 +70,12 @@ func runTxt2Img(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("error: %w", err)
 	}
 
-	path, err := saveImage(resp.Images[0], txt2imgFlags.output)
+	paths, err := saveImages(resp.Images, txt2imgFlags.output)
 	if err != nil {
 		return fmt.Errorf("error: %w", err)
 	}
-	fmt.Println(path)
+	for _, p := range paths {
+		fmt.Println(p)
+	}
 	return nil
 }

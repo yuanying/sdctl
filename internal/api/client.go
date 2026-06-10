@@ -29,6 +29,8 @@ type Txt2ImgRequest struct {
 	CFGScale       float64 `json:"cfg_scale"`
 	SamplerName    string  `json:"sampler_name,omitempty"`
 	Seed           int64   `json:"seed,omitempty"`
+	BatchCount     int     `json:"n_iter,omitempty"`
+	BatchSize      int     `json:"batch_size,omitempty"`
 }
 
 type Img2ImgRequest struct {
