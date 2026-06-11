@@ -39,6 +39,10 @@ sdctl txt2img "a landscape" --steps 30 --width 768 --height 512 -o ./output/
 sdctl txt2img "a portrait" --negative "blurry, low quality" --cfg-scale 8
 sdctl txt2img "a cat" --batch-count 4 -o ./output/
 sdctl txt2img "a cat" --batch-size 2 --batch-count 3 -o ./output/
+
+# Using config files
+sdctl txt2img --params params.yaml --prompt prompt.yaml
+sdctl txt2img "override prompt" --params params.yaml
 ```
 
 ### img2img
@@ -47,7 +51,38 @@ sdctl txt2img "a cat" --batch-size 2 --batch-count 3 -o ./output/
 sdctl img2img "a dog" input.png
 sdctl img2img "watercolor style" input.png --denoising 0.6 -o result.png
 sdctl img2img "variations" input.png --batch-count 4 -o ./output/
+
+# Using config files
+sdctl img2img --params params.yaml --prompt prompt.yaml input.png
+sdctl img2img "override prompt" --params params.yaml input.png
 ```
+
+### Config file format
+
+**Parameter file** (`params.yaml`) — generation settings and default negative prompt:
+
+```yaml
+negative_prompt: "bad quality, blurry, worst quality"
+steps: 30
+width: 768
+height: 768
+cfg_scale: 8.0
+sampler: "DPM++ 2M"
+scheduler: "Karras"
+seed: -1
+batch_count: 1
+batch_size: 1
+denoising_strength: 0.75  # img2img only
+```
+
+**Prompt file** (`prompt.yaml`) — positive prompt and optional negative prompt override:
+
+```yaml
+prompt: "a beautiful landscape, golden hour, cinematic"
+negative_prompt: "ugly, distorted"  # overrides params.yaml default
+```
+
+CLI flags always take precedence over file values.
 
 ### models
 
@@ -65,6 +100,8 @@ sdctl models set SD1_QuinceMixV2
 ### Common flags (txt2img / img2img)
 
 ```
+    --params string     generation parameter config file (YAML)
+    --prompt string     prompt file (YAML)
 -n, --negative string   negative prompt
     --steps int         sampling steps (default 20)
     --width int         image width (default 512)
