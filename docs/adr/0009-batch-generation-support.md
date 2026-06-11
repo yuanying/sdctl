@@ -1,7 +1,7 @@
 # 0009. Batch Generation Support
 
 - Date: 2026-06-10
-- Status: Accepted
+- Status: Partially superseded by [0012]
 
 ## Context
 

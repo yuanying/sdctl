@@ -38,7 +38,8 @@ sdctl txt2img "a cute cat on a window sill"
 sdctl txt2img "a landscape" --steps 30 --width 768 --height 512 -o ./output/
 sdctl txt2img "a portrait" --negative "blurry, low quality" --cfg-scale 8
 sdctl txt2img "a cat" --batch-count 4 -o ./output/
-sdctl txt2img "a cat" --batch-size 2 --batch-count 3 -o ./output/
+sdctl txt2img "a cat" --batch-size 2 --batch-count 3 -o result.png
+# → result.00.png, result.01.png, ..., result.05.png
 
 # Using config files
 sdctl txt2img --params params.yaml --prompt prompt.yaml
@@ -51,6 +52,8 @@ sdctl txt2img "override prompt" --params params.yaml
 sdctl img2img "a dog" input.png
 sdctl img2img "watercolor style" input.png --denoising 0.6 -o result.png
 sdctl img2img "variations" input.png --batch-count 4 -o ./output/
+sdctl img2img "variations" input.png --batch-count 4 -o result.png
+# → result.0.png, result.1.png, result.2.png, result.3.png
 
 # Using config files
 sdctl img2img --params params.yaml --prompt prompt.yaml input.png
@@ -114,5 +117,8 @@ sdctl models set SD1_QuinceMixV2
 -o, --output string     output file or directory (default: current directory)
 ```
 
-> **Note:** When generating multiple images (`--batch-count > 1` or `--batch-size > 1`),
-> `--output` must be a directory. Files are saved as `output-TIMESTAMP-N.png`.
+> **Note:** When `--output` is a file path (e.g. `result.png`):
+> - **Single image:** saved as `result.png`. If the file already exists, saved as `result.0001.png` (4-digit zero-padded, expands as needed).
+> - **Batch (`--batch-count > 1` or `--batch-size > 1`):** always saved with an index suffix starting from the next available number — e.g. `result.0001.png`, `result.0002.png`, …
+>
+> If `--output` is a **directory** or omitted, files are saved as `output-TIMESTAMP-N.png`.
