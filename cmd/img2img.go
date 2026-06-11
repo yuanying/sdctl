@@ -23,6 +23,7 @@ var img2imgFlags struct {
 	height            int
 	cfgScale          float64
 	sampler           string
+	scheduler         string
 	seed              int64
 	denoisingStrength float64
 	batchCount        int
@@ -38,6 +39,7 @@ func init() {
 	f.IntVar(&img2imgFlags.height, "height", 512, "image height")
 	f.Float64Var(&img2imgFlags.cfgScale, "cfg-scale", 7.0, "CFG scale")
 	f.StringVar(&img2imgFlags.sampler, "sampler", "Euler a", "sampler name")
+	f.StringVar(&img2imgFlags.scheduler, "scheduler", "", "scheduler name")
 	f.Int64Var(&img2imgFlags.seed, "seed", -1, "seed (-1 for random)")
 	f.Float64Var(&img2imgFlags.denoisingStrength, "denoising", 0.75, "denoising strength (0.0-1.0)")
 	f.IntVar(&img2imgFlags.batchCount, "batch-count", 1, "number of times to run generation")
@@ -66,6 +68,7 @@ func runImg2Img(cmd *cobra.Command, args []string) error {
 			Height:         img2imgFlags.height,
 			CFGScale:       img2imgFlags.cfgScale,
 			SamplerName:    img2imgFlags.sampler,
+			SchedulerName:  img2imgFlags.scheduler,
 			Seed:           img2imgFlags.seed,
 			BatchCount:     img2imgFlags.batchCount,
 			BatchSize:      img2imgFlags.batchSize,

@@ -60,7 +60,7 @@ func TestImg2Img(t *testing.T) {
 			Width:  512,
 			Height: 512,
 		},
-		InitImages:      []string{"base64inputimage"},
+		InitImages:        []string{"base64inputimage"},
 		DenoisingStrength: 0.75,
 	}
 	resp, err := client.Img2Img(req)
@@ -81,9 +81,9 @@ func TestGetProgress(t *testing.T) {
 			Progress:    0.5,
 			EtaRelative: 3.0,
 			State: api.ProgressState{
-				JobCount:     1,
-				JobNo:        0,
-				SamplingStep: 10,
+				JobCount:      1,
+				JobNo:         0,
+				SamplingStep:  10,
 				SamplingSteps: 20,
 			},
 		}
@@ -183,6 +183,89 @@ func TestTxt2ImgWithBatch(t *testing.T) {
 	}
 	if len(resp.Images) != 6 {
 		t.Errorf("expected 6 images, got %d", len(resp.Images))
+	}
+}
+
+func TestListSamplers(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/sdapi/v1/samplers" || r.Method != http.MethodGet {
+			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		resp := []api.Sampler{
+			{Name: "Euler a", Aliases: []string{"k_euler_a"}},
+			{Name: "DPM++ 2M", Aliases: []string{"k_dpmpp_2m"}},
+		}
+		json.NewEncoder(w).Encode(resp)
+	}))
+	defer server.Close()
+
+	client := api.NewClient(server.URL)
+	samplers, err := client.ListSamplers()
+	if err != nil {
+		t.Fatalf("ListSamplers failed: %v", err)
+	}
+	if len(samplers) != 2 {
+		t.Errorf("expected 2 samplers, got %d", len(samplers))
+	}
+	if samplers[0].Name != "Euler a" {
+		t.Errorf("unexpected sampler name: %s", samplers[0].Name)
+	}
+}
+
+func TestListSchedulers(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/sdapi/v1/schedulers" || r.Method != http.MethodGet {
+			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		resp := []api.Scheduler{
+			{Name: "automatic", Label: "Automatic"},
+			{Name: "karras", Label: "Karras"},
+		}
+		json.NewEncoder(w).Encode(resp)
+	}))
+	defer server.Close()
+
+	client := api.NewClient(server.URL)
+	schedulers, err := client.ListSchedulers()
+	if err != nil {
+		t.Fatalf("ListSchedulers failed: %v", err)
+	}
+	if len(schedulers) != 2 {
+		t.Errorf("expected 2 schedulers, got %d", len(schedulers))
+	}
+	if schedulers[0].Name != "automatic" {
+		t.Errorf("unexpected scheduler name: %s", schedulers[0].Name)
+	}
+}
+
+func TestTxt2ImgWithScheduler(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var body map[string]interface{}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Errorf("failed to decode body: %v", err)
+		}
+		if v, ok := body["scheduler"].(string); !ok || v != "karras" {
+			t.Errorf("expected scheduler karras, got %v", body["scheduler"])
+		}
+		resp := api.GenerateResponse{Images: []string{"base64image"}}
+		json.NewEncoder(w).Encode(resp)
+	}))
+	defer server.Close()
+
+	client := api.NewClient(server.URL)
+	req := api.Txt2ImgRequest{
+		Prompt:        "a cat",
+		Steps:         20,
+		Width:         512,
+		Height:        512,
+		SchedulerName: "karras",
+	}
+	resp, err := client.Txt2Img(req)
+	if err != nil {
+		t.Fatalf("Txt2Img failed: %v", err)
+	}
+	if len(resp.Images) != 1 {
+		t.Errorf("expected 1 image, got %d", len(resp.Images))
 	}
 }
 

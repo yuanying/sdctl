@@ -28,6 +28,7 @@ type Txt2ImgRequest struct {
 	Height         int     `json:"height"`
 	CFGScale       float64 `json:"cfg_scale"`
 	SamplerName    string  `json:"sampler_name,omitempty"`
+	SchedulerName  string  `json:"scheduler,omitempty"`
 	Seed           int64   `json:"seed,omitempty"`
 	BatchCount     int     `json:"n_iter,omitempty"`
 	BatchSize      int     `json:"batch_size,omitempty"`
@@ -61,6 +62,16 @@ type Model struct {
 	Title     string `json:"title"`
 	ModelName string `json:"model_name"`
 	Hash      string `json:"hash"`
+}
+
+type Sampler struct {
+	Name    string   `json:"name"`
+	Aliases []string `json:"aliases"`
+}
+
+type Scheduler struct {
+	Name  string `json:"name"`
+	Label string `json:"label"`
 }
 
 func (c *Client) post(path string, body any) (*http.Response, error) {
@@ -141,6 +152,32 @@ func (c *Client) ListModels() ([]Model, error) {
 		return nil, err
 	}
 	return models, nil
+}
+
+func (c *Client) ListSamplers() ([]Sampler, error) {
+	resp, err := c.get("/sdapi/v1/samplers")
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	var samplers []Sampler
+	if err := json.NewDecoder(resp.Body).Decode(&samplers); err != nil {
+		return nil, err
+	}
+	return samplers, nil
+}
+
+func (c *Client) ListSchedulers() ([]Scheduler, error) {
+	resp, err := c.get("/sdapi/v1/schedulers")
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	var schedulers []Scheduler
+	if err := json.NewDecoder(resp.Body).Decode(&schedulers); err != nil {
+		return nil, err
+	}
+	return schedulers, nil
 }
 
 func (c *Client) SetModel(modelName string) error {
