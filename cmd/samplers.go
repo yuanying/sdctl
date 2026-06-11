@@ -8,7 +8,7 @@ import (
 
 var samplersCmd = &cobra.Command{
 	Use:   "samplers",
-	Short: "Manage samplers and schedulers",
+	Short: "Manage samplers",
 }
 
 var samplersListCmd = &cobra.Command{
@@ -17,15 +17,8 @@ var samplersListCmd = &cobra.Command{
 	RunE:  runSamplersList,
 }
 
-var schedulersListCmd = &cobra.Command{
-	Use:   "schedulers",
-	Short: "List available schedulers",
-	RunE:  runSchedulersList,
-}
-
 func init() {
 	samplersCmd.AddCommand(samplersListCmd)
-	samplersCmd.AddCommand(schedulersListCmd)
 	rootCmd.AddCommand(samplersCmd)
 }
 
@@ -36,17 +29,6 @@ func runSamplersList(cmd *cobra.Command, args []string) error {
 	}
 	for _, s := range samplers {
 		fmt.Println(s.Name)
-	}
-	return nil
-}
-
-func runSchedulersList(cmd *cobra.Command, args []string) error {
-	schedulers, err := client.ListSchedulers()
-	if err != nil {
-		return fmt.Errorf("error: %w", err)
-	}
-	for _, s := range schedulers {
-		fmt.Printf("%-20s %s\n", s.Name, s.Label)
 	}
 	return nil
 }
