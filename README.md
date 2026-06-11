@@ -117,6 +117,8 @@ sdctl models set SD1_QuinceMixV2
 -o, --output string     output file or directory (default: current directory)
 ```
 
-> **Note:** When generating multiple images (`--batch-count > 1` or `--batch-size > 1`):
-> - If `--output` is a **file path** (e.g. `result.png`), files are saved as `result.0.png`, `result.1.png`, … (zero-padded when 10+ images).
-> - If `--output` is a **directory** or omitted, files are saved as `output-TIMESTAMP-N.png` in that directory.
+> **Note:** When `--output` is a file path (e.g. `result.png`):
+> - **Single image:** saved as `result.png`. If the file already exists, saved as `result.0001.png` (4-digit zero-padded, expands as needed).
+> - **Batch (`--batch-count > 1` or `--batch-size > 1`):** always saved with an index suffix starting from the next available number — e.g. `result.0001.png`, `result.0002.png`, …
+>
+> If `--output` is a **directory** or omitted, files are saved as `output-TIMESTAMP-N.png`.
