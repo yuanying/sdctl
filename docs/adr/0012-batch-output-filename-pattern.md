@@ -1,7 +1,7 @@
 # 0012. Batch Output Filename Pattern for File Path Specification
 
 - Date: 2026-06-11
-- Status: Accepted
+- Status: Superseded by [0013](0013-output-filename-dedup-index.md)
 
 ## Context
 
