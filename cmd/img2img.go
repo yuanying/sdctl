@@ -7,12 +7,13 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/yuanying/sdctl/internal/api"
+	"github.com/yuanying/sdctl/internal/genconfig"
 )
 
 var img2imgCmd = &cobra.Command{
 	Use:   "img2img [prompt] [input-image]",
 	Short: "Generate image from text prompt and input image",
-	Args:  cobra.ExactArgs(2),
+	Args:  cobra.RangeArgs(1, 2),
 	RunE:  runImg2Img,
 }
 
@@ -29,6 +30,8 @@ var img2imgFlags struct {
 	batchCount        int
 	batchSize         int
 	output            string
+	paramsFile        string
+	promptFile        string
 }
 
 func init() {
@@ -45,46 +48,86 @@ func init() {
 	f.IntVar(&img2imgFlags.batchCount, "batch-count", 1, "number of times to run generation")
 	f.IntVar(&img2imgFlags.batchSize, "batch-size", 1, "number of images per batch")
 	f.StringVarP(&img2imgFlags.output, "output", "o", "", "output file or directory")
+	f.StringVar(&img2imgFlags.paramsFile, "params", "", "generation parameter config file (YAML)")
+	f.StringVar(&img2imgFlags.promptFile, "prompt", "", "prompt file (YAML)")
 
 	rootCmd.AddCommand(img2imgCmd)
 }
 
 func runImg2Img(cmd *cobra.Command, args []string) error {
-	if err := validateOutputForBatch(img2imgFlags.output, img2imgFlags.batchCount, img2imgFlags.batchSize); err != nil {
-		return err
-	}
-	if cmd.Flags().Changed("sampler") {
-		if err := validateSampler(img2imgFlags.sampler); err != nil {
-			return err
-		}
-	}
-	if cmd.Flags().Changed("scheduler") {
-		if err := validateScheduler(img2imgFlags.scheduler); err != nil {
-			return err
+	var paramCfg *genconfig.ParamConfig
+	if img2imgFlags.paramsFile != "" {
+		var err error
+		paramCfg, err = genconfig.LoadParamConfig(img2imgFlags.paramsFile)
+		if err != nil {
+			return fmt.Errorf("error loading params file: %w", err)
 		}
 	}
 
-	imageData, err := os.ReadFile(args[1])
+	var promptCfg *genconfig.PromptConfig
+	if img2imgFlags.promptFile != "" {
+		var err error
+		promptCfg, err = genconfig.LoadPromptConfig(img2imgFlags.promptFile)
+		if err != nil {
+			return fmt.Errorf("error loading prompt file: %w", err)
+		}
+	}
+
+	// With --prompt: args = [input-image] or [prompt-override, input-image]
+	// Without --prompt: args = [prompt, input-image]
+	var promptArgs []string
+	var imagePath string
+	if img2imgFlags.promptFile != "" {
+		imagePath = args[len(args)-1]
+		promptArgs = args[:len(args)-1]
+	} else {
+		if len(args) < 2 {
+			return fmt.Errorf("prompt is required: provide as argument or via --prompt file")
+		}
+		promptArgs = args[:1]
+		imagePath = args[1]
+	}
+
+	prompt, err := resolvePrompt(promptArgs, promptCfg)
 	if err != nil {
-		return fmt.Errorf("error: cannot read image %s: %w", args[1], err)
+		return err
+	}
+
+	imageData, err := os.ReadFile(imagePath)
+	if err != nil {
+		return fmt.Errorf("error: cannot read image %s: %w", imagePath, err)
 	}
 
 	req := api.Img2ImgRequest{
 		Txt2ImgRequest: api.Txt2ImgRequest{
-			Prompt:         args[0],
-			NegativePrompt: img2imgFlags.negativePrompt,
-			Steps:          img2imgFlags.steps,
-			Width:          img2imgFlags.width,
-			Height:         img2imgFlags.height,
-			CFGScale:       img2imgFlags.cfgScale,
-			SamplerName:    img2imgFlags.sampler,
-			SchedulerName:  img2imgFlags.scheduler,
-			Seed:           img2imgFlags.seed,
-			BatchCount:     img2imgFlags.batchCount,
-			BatchSize:      img2imgFlags.batchSize,
+			Prompt:         prompt,
+			NegativePrompt: resolveNegativePrompt(cmd, img2imgFlags.negativePrompt, promptCfg, paramCfg),
+			Steps:          resolveInt(cmd, "steps", img2imgFlags.steps, paramCfg.StepsValue()),
+			Width:          resolveInt(cmd, "width", img2imgFlags.width, paramCfg.WidthValue()),
+			Height:         resolveInt(cmd, "height", img2imgFlags.height, paramCfg.HeightValue()),
+			CFGScale:       resolveFloat64(cmd, "cfg-scale", img2imgFlags.cfgScale, paramCfg.CFGScaleValue()),
+			SamplerName:    resolveString(cmd, "sampler", img2imgFlags.sampler, paramCfg.SamplerValue()),
+			SchedulerName:  resolveString(cmd, "scheduler", img2imgFlags.scheduler, paramCfg.SchedulerValue()),
+			Seed:           resolveInt64(cmd, "seed", img2imgFlags.seed, paramCfg.SeedValue()),
+			BatchCount:     resolveInt(cmd, "batch-count", img2imgFlags.batchCount, paramCfg.BatchCountValue()),
+			BatchSize:      resolveInt(cmd, "batch-size", img2imgFlags.batchSize, paramCfg.BatchSizeValue()),
 		},
 		InitImages:        []string{base64.StdEncoding.EncodeToString(imageData)},
-		DenoisingStrength: img2imgFlags.denoisingStrength,
+		DenoisingStrength: resolveFloat64(cmd, "denoising", img2imgFlags.denoisingStrength, paramCfg.DenoisingStrengthValue()),
+	}
+
+	if err := validateOutputForBatch(img2imgFlags.output, req.BatchCount, req.BatchSize); err != nil {
+		return err
+	}
+	if cmd.Flags().Changed("sampler") {
+		if err := validateSampler(req.SamplerName); err != nil {
+			return err
+		}
+	}
+	if cmd.Flags().Changed("scheduler") {
+		if err := validateScheduler(req.SchedulerName); err != nil {
+			return err
+		}
 	}
 
 	stop := make(chan struct{})

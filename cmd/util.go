@@ -8,8 +8,61 @@ import (
 	"time"
 
 	"github.com/schollz/progressbar/v3"
+	"github.com/spf13/cobra"
 	"github.com/yuanying/sdctl/internal/api"
+	"github.com/yuanying/sdctl/internal/genconfig"
 )
+
+func resolvePrompt(args []string, promptCfg *genconfig.PromptConfig) (string, error) {
+	if len(args) > 0 {
+		return args[0], nil
+	}
+	if promptCfg != nil && promptCfg.Prompt != "" {
+		return promptCfg.Prompt, nil
+	}
+	return "", fmt.Errorf("prompt is required: provide as argument or via --prompt file")
+}
+
+func resolveNegativePrompt(cmd *cobra.Command, flagVal string, promptCfg *genconfig.PromptConfig, paramCfg *genconfig.ParamConfig) string {
+	if cmd.Flags().Changed("negative") {
+		return flagVal
+	}
+	if promptCfg != nil && promptCfg.NegativePrompt != "" {
+		return promptCfg.NegativePrompt
+	}
+	if v := paramCfg.NegativePromptValue(); v != nil {
+		return *v
+	}
+	return flagVal
+}
+
+func resolveInt(cmd *cobra.Command, flagName string, flagVal int, cfgVal *int) int {
+	if cmd.Flags().Changed(flagName) || cfgVal == nil {
+		return flagVal
+	}
+	return *cfgVal
+}
+
+func resolveInt64(cmd *cobra.Command, flagName string, flagVal int64, cfgVal *int64) int64 {
+	if cmd.Flags().Changed(flagName) || cfgVal == nil {
+		return flagVal
+	}
+	return *cfgVal
+}
+
+func resolveFloat64(cmd *cobra.Command, flagName string, flagVal float64, cfgVal *float64) float64 {
+	if cmd.Flags().Changed(flagName) || cfgVal == nil {
+		return flagVal
+	}
+	return *cfgVal
+}
+
+func resolveString(cmd *cobra.Command, flagName string, flagVal string, cfgVal *string) string {
+	if cmd.Flags().Changed(flagName) || cfgVal == nil {
+		return flagVal
+	}
+	return *cfgVal
+}
 
 func validateSampler(name string) error {
 	samplers, err := client.ListSamplers()
