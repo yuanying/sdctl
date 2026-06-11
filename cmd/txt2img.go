@@ -21,6 +21,7 @@ var txt2imgFlags struct {
 	height         int
 	cfgScale       float64
 	sampler        string
+	scheduler      string
 	seed           int64
 	batchCount     int
 	batchSize      int
@@ -35,6 +36,7 @@ func init() {
 	f.IntVar(&txt2imgFlags.height, "height", 512, "image height")
 	f.Float64Var(&txt2imgFlags.cfgScale, "cfg-scale", 7.0, "CFG scale")
 	f.StringVar(&txt2imgFlags.sampler, "sampler", "Euler a", "sampler name")
+	f.StringVar(&txt2imgFlags.scheduler, "scheduler", "", "scheduler name")
 	f.Int64Var(&txt2imgFlags.seed, "seed", -1, "seed (-1 for random)")
 	f.IntVar(&txt2imgFlags.batchCount, "batch-count", 1, "number of times to run generation")
 	f.IntVar(&txt2imgFlags.batchSize, "batch-size", 1, "number of images per batch")
@@ -47,6 +49,16 @@ func runTxt2Img(cmd *cobra.Command, args []string) error {
 	if err := validateOutputForBatch(txt2imgFlags.output, txt2imgFlags.batchCount, txt2imgFlags.batchSize); err != nil {
 		return err
 	}
+	if cmd.Flags().Changed("sampler") {
+		if err := validateSampler(txt2imgFlags.sampler); err != nil {
+			return err
+		}
+	}
+	if cmd.Flags().Changed("scheduler") {
+		if err := validateScheduler(txt2imgFlags.scheduler); err != nil {
+			return err
+		}
+	}
 
 	req := api.Txt2ImgRequest{
 		Prompt:         args[0],
@@ -56,6 +68,7 @@ func runTxt2Img(cmd *cobra.Command, args []string) error {
 		Height:         txt2imgFlags.height,
 		CFGScale:       txt2imgFlags.cfgScale,
 		SamplerName:    txt2imgFlags.sampler,
+		SchedulerName:  txt2imgFlags.scheduler,
 		Seed:           txt2imgFlags.seed,
 		BatchCount:     txt2imgFlags.batchCount,
 		BatchSize:      txt2imgFlags.batchSize,
