@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/schollz/progressbar/v3"
@@ -80,20 +82,6 @@ func validateScheduler(name string) error {
 	return api.ValidateSchedulerName(schedulers, name)
 }
 
-func validateOutputForBatch(outputPath string, batchCount, batchSize int) error {
-	if batchCount*batchSize <= 1 {
-		return nil
-	}
-	if outputPath == "" {
-		return nil
-	}
-	info, err := os.Stat(outputPath)
-	if err != nil || !info.IsDir() {
-		return fmt.Errorf("--output must be a directory when generating multiple images")
-	}
-	return nil
-}
-
 func saveImages(images []string, outputPath string) ([]string, error) {
 	if len(images) == 1 {
 		path, err := saveImage(images[0], outputPath)
@@ -103,23 +91,43 @@ func saveImages(images []string, outputPath string) ([]string, error) {
 		return []string{path}, nil
 	}
 
-	// Multiple images: output must be a directory or empty (current dir)
-	if outputPath != "" {
-		info, err := os.Stat(outputPath)
-		if err != nil || !info.IsDir() {
-			return nil, fmt.Errorf("--output must be a directory when generating multiple images")
-		}
+	// Multiple images: directory or default → timestamp-based names
+	if outputPath == "" {
+		return saveImagesToDir(images, "")
+	}
+	info, err := os.Stat(outputPath)
+	if err == nil && info.IsDir() {
+		return saveImagesToDir(images, outputPath)
 	}
 
+	// File path specified: generate <stem>.<N><ext> with zero-padding
+	ext := filepath.Ext(outputPath)
+	stem := strings.TrimSuffix(outputPath, ext)
+	width := len(strconv.Itoa(len(images) - 1))
+
+	paths := make([]string, 0, len(images))
+	for i, imgData := range images {
+		dest := fmt.Sprintf("%s.%0*d%s", stem, width, i, ext)
+		data, err := base64.StdEncoding.DecodeString(imgData)
+		if err != nil {
+			return nil, fmt.Errorf("failed to decode image %d: %w", i+1, err)
+		}
+		if err := os.WriteFile(dest, data, 0644); err != nil {
+			return nil, fmt.Errorf("failed to write image %d: %w", i+1, err)
+		}
+		paths = append(paths, dest)
+	}
+	return paths, nil
+}
+
+func saveImagesToDir(images []string, dir string) ([]string, error) {
 	base := time.Now().Format("20060102-150405")
 	paths := make([]string, 0, len(images))
 	for i, imgData := range images {
 		filename := fmt.Sprintf("output-%s-%d.png", base, i+1)
-		var dest string
-		if outputPath != "" {
-			dest = filepath.Join(outputPath, filename)
-		} else {
-			dest = filename
+		dest := filename
+		if dir != "" {
+			dest = filepath.Join(dir, filename)
 		}
 		data, err := base64.StdEncoding.DecodeString(imgData)
 		if err != nil {

@@ -88,9 +88,6 @@ func runTxt2Img(cmd *cobra.Command, args []string) error {
 		BatchSize:      resolveInt(cmd, "batch-size", txt2imgFlags.batchSize, paramCfg.BatchSizeValue()),
 	}
 
-	if err := validateOutputForBatch(txt2imgFlags.output, req.BatchCount, req.BatchSize); err != nil {
-		return err
-	}
 	if cmd.Flags().Changed("sampler") {
 		if err := validateSampler(req.SamplerName); err != nil {
 			return err

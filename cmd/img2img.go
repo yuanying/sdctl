@@ -116,9 +116,6 @@ func runImg2Img(cmd *cobra.Command, args []string) error {
 		DenoisingStrength: resolveFloat64(cmd, "denoising", img2imgFlags.denoisingStrength, paramCfg.DenoisingStrengthValue()),
 	}
 
-	if err := validateOutputForBatch(img2imgFlags.output, req.BatchCount, req.BatchSize); err != nil {
-		return err
-	}
 	if cmd.Flags().Changed("sampler") {
 		if err := validateSampler(req.SamplerName); err != nil {
 			return err
