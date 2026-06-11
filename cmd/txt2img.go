@@ -49,6 +49,16 @@ func runTxt2Img(cmd *cobra.Command, args []string) error {
 	if err := validateOutputForBatch(txt2imgFlags.output, txt2imgFlags.batchCount, txt2imgFlags.batchSize); err != nil {
 		return err
 	}
+	if cmd.Flags().Changed("sampler") {
+		if err := validateSampler(txt2imgFlags.sampler); err != nil {
+			return err
+		}
+	}
+	if cmd.Flags().Changed("scheduler") {
+		if err := validateScheduler(txt2imgFlags.scheduler); err != nil {
+			return err
+		}
+	}
 
 	req := api.Txt2ImgRequest{
 		Prompt:         args[0],

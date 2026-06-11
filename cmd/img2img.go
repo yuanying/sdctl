@@ -53,6 +53,16 @@ func runImg2Img(cmd *cobra.Command, args []string) error {
 	if err := validateOutputForBatch(img2imgFlags.output, img2imgFlags.batchCount, img2imgFlags.batchSize); err != nil {
 		return err
 	}
+	if cmd.Flags().Changed("sampler") {
+		if err := validateSampler(img2imgFlags.sampler); err != nil {
+			return err
+		}
+	}
+	if cmd.Flags().Changed("scheduler") {
+		if err := validateScheduler(img2imgFlags.scheduler); err != nil {
+			return err
+		}
+	}
 
 	imageData, err := os.ReadFile(args[1])
 	if err != nil {

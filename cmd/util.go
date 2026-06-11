@@ -11,6 +11,22 @@ import (
 	"github.com/yuanying/sdctl/internal/api"
 )
 
+func validateSampler(name string) error {
+	samplers, err := client.ListSamplers()
+	if err != nil {
+		return fmt.Errorf("error fetching samplers: %w", err)
+	}
+	return api.ValidateSamplerName(samplers, name)
+}
+
+func validateScheduler(name string) error {
+	schedulers, err := client.ListSchedulers()
+	if err != nil {
+		return fmt.Errorf("error fetching schedulers: %w", err)
+	}
+	return api.ValidateSchedulerName(schedulers, name)
+}
+
 func validateOutputForBatch(outputPath string, batchCount, batchSize int) error {
 	if batchCount*batchSize <= 1 {
 		return nil
