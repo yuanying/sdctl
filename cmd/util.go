@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -83,41 +84,73 @@ func validateScheduler(name string) error {
 }
 
 func saveImages(images []string, outputPath string) ([]string, error) {
-	if len(images) == 1 {
-		path, err := saveImage(images[0], outputPath)
-		if err != nil {
-			return nil, err
+	isBatch := len(images) > 1
+
+	if outputPath != "" {
+		info, err := os.Stat(outputPath)
+		if err == nil && info.IsDir() {
+			return saveImagesToDir(images, outputPath)
 		}
-		return []string{path}, nil
+		paths := make([]string, 0, len(images))
+		for i, imgData := range images {
+			dest := resolveUniqueFilePath(outputPath, isBatch)
+			data, err := base64.StdEncoding.DecodeString(imgData)
+			if err != nil {
+				return nil, fmt.Errorf("failed to decode image %d: %w", i+1, err)
+			}
+			if err := os.WriteFile(dest, data, 0644); err != nil {
+				return nil, fmt.Errorf("failed to write image %d: %w", i+1, err)
+			}
+			paths = append(paths, dest)
+		}
+		return paths, nil
 	}
 
-	// Multiple images: directory or default → timestamp-based names
-	if outputPath == "" {
-		return saveImagesToDir(images, "")
-	}
-	info, err := os.Stat(outputPath)
-	if err == nil && info.IsDir() {
-		return saveImagesToDir(images, outputPath)
+	return saveImagesToDir(images, "")
+}
+
+// resolveUniqueFilePath returns a path that does not conflict with existing files.
+// If isBatch is true, always appends an indexed suffix (output.0001.png).
+// If isBatch is false, the original path is returned as-is when the file does not exist.
+func resolveUniqueFilePath(outputPath string, isBatch bool) string {
+	if !isBatch {
+		if _, err := os.Stat(outputPath); os.IsNotExist(err) {
+			return outputPath
+		}
 	}
 
-	// File path specified: generate <stem>.<N><ext> with zero-padding
 	ext := filepath.Ext(outputPath)
 	stem := strings.TrimSuffix(outputPath, ext)
-	width := len(strconv.Itoa(len(images) - 1))
+	dir := filepath.Dir(outputPath)
+	base := filepath.Base(stem)
 
-	paths := make([]string, 0, len(images))
-	for i, imgData := range images {
-		dest := fmt.Sprintf("%s.%0*d%s", stem, width, i, ext)
-		data, err := base64.StdEncoding.DecodeString(imgData)
-		if err != nil {
-			return nil, fmt.Errorf("failed to decode image %d: %w", i+1, err)
-		}
-		if err := os.WriteFile(dest, data, 0644); err != nil {
-			return nil, fmt.Errorf("failed to write image %d: %w", i+1, err)
-		}
-		paths = append(paths, dest)
+	next := findMaxIndexedSuffix(dir, base, ext) + 1
+	digits := max(4, len(strconv.Itoa(next)))
+	return fmt.Sprintf("%s.%0*d%s", stem, digits, next, ext)
+}
+
+// findMaxIndexedSuffix scans dir for files matching <base>.<digits><ext> and returns the max index found.
+func findMaxIndexedSuffix(dir, base, ext string) int {
+	pattern := regexp.MustCompile(`^` + regexp.QuoteMeta(base) + `\.(\d+)` + regexp.QuoteMeta(ext) + `$`)
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return 0
 	}
-	return paths, nil
+	max := 0
+	for _, e := range entries {
+		m := pattern.FindStringSubmatch(e.Name())
+		if m == nil {
+			continue
+		}
+		n, err := strconv.Atoi(m[1])
+		if err != nil {
+			continue
+		}
+		if n > max {
+			max = n
+		}
+	}
+	return max
 }
 
 func saveImagesToDir(images []string, dir string) ([]string, error) {
@@ -139,34 +172,6 @@ func saveImagesToDir(images []string, dir string) ([]string, error) {
 		paths = append(paths, dest)
 	}
 	return paths, nil
-}
-
-func saveImage(b64data, outputPath string) (string, error) {
-	data, err := base64.StdEncoding.DecodeString(b64data)
-	if err != nil {
-		return "", fmt.Errorf("failed to decode image: %w", err)
-	}
-
-	dest := resolveOutputPath(outputPath)
-	if err := os.WriteFile(dest, data, 0644); err != nil {
-		return "", fmt.Errorf("failed to write image: %w", err)
-	}
-	return dest, nil
-}
-
-func resolveOutputPath(outputPath string) string {
-	if outputPath != "" {
-		info, err := os.Stat(outputPath)
-		if err == nil && info.IsDir() {
-			return filepath.Join(outputPath, defaultFilename())
-		}
-		return outputPath
-	}
-	return defaultFilename()
-}
-
-func defaultFilename() string {
-	return fmt.Sprintf("output-%s.png", time.Now().Format("20060102-150405"))
 }
 
 func watchProgress(stop <-chan struct{}) {
@@ -204,13 +209,7 @@ func watchProgress(stop <-chan struct{}) {
 }
 
 func updateProgress(bar *progressbar.ProgressBar, resp *api.ProgressResponse) {
-	pct := int(resp.Progress * 100)
-	if pct < 0 {
-		pct = 0
-	}
-	if pct > 100 {
-		pct = 100
-	}
+	pct := max(0, min(100, int(resp.Progress*100)))
 	bar.Set(pct)
 	if resp.State.SamplingSteps > 0 {
 		bar.Describe(fmt.Sprintf("Generating [%d/%d steps]",
