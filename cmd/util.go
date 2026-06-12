@@ -116,6 +116,15 @@ func resolveOverrideModules(settings map[string]any, modules []api.SDModule) map
 	return result
 }
 
+func buildModelOverride(model string) map[string]any {
+	if model == "" {
+		return nil
+	}
+	return map[string]any{
+		"sd_model_checkpoint": model,
+	}
+}
+
 func buildAdditionalModules(vae, textEncoder string) map[string]any {
 	var modules []string
 	if vae != "" {
@@ -144,8 +153,8 @@ func boolPtrIfSet(m map[string]any) *bool {
 	if m == nil {
 		return nil
 	}
-	t := true
-	return &t
+	f := false
+	return &f
 }
 
 func mergeMap(base, override map[string]any) map[string]any {
@@ -159,6 +168,14 @@ func mergeMap(base, override map[string]any) map[string]any {
 	maps.Copy(result, base)
 	maps.Copy(result, override)
 	return result
+}
+
+func validateModel(name string) error {
+	models, err := client.ListModels()
+	if err != nil {
+		return fmt.Errorf("error fetching models: %w", err)
+	}
+	return api.ValidateModelName(models, name)
 }
 
 func validateSampler(name string) error {
