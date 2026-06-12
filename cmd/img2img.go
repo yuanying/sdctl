@@ -34,6 +34,7 @@ var img2imgFlags struct {
 	promptFile        string
 	vae               string
 	textEncoder       string
+	model             string
 }
 
 func init() {
@@ -54,6 +55,7 @@ func init() {
 	f.StringVar(&img2imgFlags.promptFile, "prompt", "", "prompt file (YAML)")
 	f.StringVar(&img2imgFlags.vae, "vae", "", "VAE model path (forge_additional_modules)")
 	f.StringVar(&img2imgFlags.textEncoder, "text-encoder", "", "text encoder model path (forge_additional_modules)")
+	f.StringVar(&img2imgFlags.model, "model", "", "model checkpoint name")
 
 	rootCmd.AddCommand(img2imgCmd)
 }
@@ -102,11 +104,21 @@ func runImg2Img(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("error: cannot read image %s: %w", imagePath, err)
 	}
 
+	if cmd.Flags().Changed("model") {
+		if err := validateModel(img2imgFlags.model); err != nil {
+			return err
+		}
+	}
+
+	modelOverride := buildModelOverride(resolveFlag(cmd, "model", img2imgFlags.model))
 	overrideSettings := mergeMap(
 		paramCfg.OverrideSettingsValue(),
-		buildAdditionalModules(
-			resolveFlag(cmd, "vae", img2imgFlags.vae),
-			resolveFlag(cmd, "text-encoder", img2imgFlags.textEncoder),
+		mergeMap(
+			modelOverride,
+			buildAdditionalModules(
+				resolveFlag(cmd, "vae", img2imgFlags.vae),
+				resolveFlag(cmd, "text-encoder", img2imgFlags.textEncoder),
+			),
 		),
 	)
 	if overrideSettings != nil {

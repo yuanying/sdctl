@@ -41,9 +41,13 @@ sdctl txt2img "a cat" --batch-count 4 -o ./output/
 sdctl txt2img "a cat" --batch-size 2 --batch-count 3 -o result.png
 # → result.0001.png, result.0002.png, ..., result.0006.png
 
+# Specify model checkpoint for this generation
+sdctl txt2img "anime girl" --model animagineXLV31_v31
+
 # VAE / text encoder (required for some models e.g. anima)
 # model name or full path are both accepted
 sdctl txt2img "anime girl" \
+  --model animagineXLV31_v31 \
   --vae qwen_image_vae.safetensors \
   --text-encoder qwen_3_06b_base.safetensors
 
@@ -83,6 +87,7 @@ batch_count: 1
 batch_size: 1
 denoising_strength: 0.75  # img2img only
 override_settings:
+  sd_model_checkpoint: "SD1_QuinceMixV2"   # model checkpoint (no validation)
   forge_additional_modules:
     - "qwen_image_vae.safetensors"          # model name or full path
     - "qwen_3_06b_base.safetensors"
@@ -133,6 +138,7 @@ VAE とテキストエンコーダーの一覧を表示します。`--vae` / `--
     --batch-count int      number of times to run generation (default 1)
     --batch-size int       number of images per batch (default 1)
 -o, --output string        output file or directory (default: current directory)
+    --model string         model checkpoint name (must match `sdctl models list` exactly)
     --vae string           VAE model path (sets forge_additional_modules[0])
     --text-encoder string  text encoder model path (sets forge_additional_modules[1])
 ```

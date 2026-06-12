@@ -52,6 +52,29 @@ func TestValidateSchedulerName(t *testing.T) {
 	}
 }
 
+func TestValidateModelName(t *testing.T) {
+	models := []api.Model{
+		{ModelName: "realisticVisionV60B1"},
+		{ModelName: "dreamshaper_8"},
+	}
+
+	if err := api.ValidateModelName(models, "realisticVisionV60B1"); err != nil {
+		t.Errorf("expected no error for valid model, got: %v", err)
+	}
+
+	err := api.ValidateModelName(models, "invalid")
+	if err == nil {
+		t.Fatal("expected error for invalid model, got nil")
+	}
+	msg := err.Error()
+	if !contains(msg, "invalid") {
+		t.Errorf("error should mention the invalid value, got: %s", msg)
+	}
+	if !contains(msg, "realisticVisionV60B1") {
+		t.Errorf("error should list available models, got: %s", msg)
+	}
+}
+
 func contains(s, substr string) bool {
 	return len(s) >= len(substr) && (s == substr || len(s) > 0 && containsStr(s, substr))
 }

@@ -31,6 +31,7 @@ var txt2imgFlags struct {
 	promptFile     string
 	vae            string
 	textEncoder    string
+	model          string
 }
 
 func init() {
@@ -50,6 +51,7 @@ func init() {
 	f.StringVar(&txt2imgFlags.promptFile, "prompt", "", "prompt file (YAML)")
 	f.StringVar(&txt2imgFlags.vae, "vae", "", "VAE model path (forge_additional_modules)")
 	f.StringVar(&txt2imgFlags.textEncoder, "text-encoder", "", "text encoder model path (forge_additional_modules)")
+	f.StringVar(&txt2imgFlags.model, "model", "", "model checkpoint name")
 
 	rootCmd.AddCommand(txt2imgCmd)
 }
@@ -78,11 +80,21 @@ func runTxt2Img(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	if cmd.Flags().Changed("model") {
+		if err := validateModel(txt2imgFlags.model); err != nil {
+			return err
+		}
+	}
+
+	modelOverride := buildModelOverride(resolveFlag(cmd, "model", txt2imgFlags.model))
 	overrideSettings := mergeMap(
 		paramCfg.OverrideSettingsValue(),
-		buildAdditionalModules(
-			resolveFlag(cmd, "vae", txt2imgFlags.vae),
-			resolveFlag(cmd, "text-encoder", txt2imgFlags.textEncoder),
+		mergeMap(
+			modelOverride,
+			buildAdditionalModules(
+				resolveFlag(cmd, "vae", txt2imgFlags.vae),
+				resolveFlag(cmd, "text-encoder", txt2imgFlags.textEncoder),
+			),
 		),
 	)
 	if overrideSettings != nil {
