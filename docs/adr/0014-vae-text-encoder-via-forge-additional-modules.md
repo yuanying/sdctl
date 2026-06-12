@@ -1,7 +1,7 @@
 # 0014. VAE / text encoder の指定に forge_additional_modules を使用する
 
 - Date: 2026-06-12
-- Status: Accepted
+- Status: Superseded by [0016]
 
 ## Context
 
