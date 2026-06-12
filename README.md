@@ -42,9 +42,10 @@ sdctl txt2img "a cat" --batch-size 2 --batch-count 3 -o result.png
 # → result.0001.png, result.0002.png, ..., result.0006.png
 
 # VAE / text encoder (required for some models e.g. anima)
+# model name or full path are both accepted
 sdctl txt2img "anime girl" \
-  --vae /models/VAE/anima/qwen_image_vae.safetensors \
-  --text-encoder /models/text_encoder/anima/qwen_3_06b_base.safetensors
+  --vae qwen_image_vae.safetensors \
+  --text-encoder qwen_3_06b_base.safetensors
 
 # Using config files
 sdctl txt2img --params params.yaml --prompt prompt.yaml
@@ -83,8 +84,8 @@ batch_size: 1
 denoising_strength: 0.75  # img2img only
 override_settings:
   forge_additional_modules:
-    - "/models/VAE/anima/qwen_image_vae.safetensors"
-    - "/models/text_encoder/anima/qwen_3_06b_base.safetensors"
+    - "qwen_image_vae.safetensors"          # model name or full path
+    - "qwen_3_06b_base.safetensors"
 ```
 
 **Prompt file** (`prompt.yaml`) — positive prompt and optional negative prompt override:

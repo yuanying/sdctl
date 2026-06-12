@@ -68,6 +68,54 @@ func resolveString(cmd *cobra.Command, flagName string, flagVal string, cfgVal *
 	return *cfgVal
 }
 
+// resolveModulePath returns the full path for a module name.
+// If value is already an absolute path or empty, it is returned as-is.
+func resolveModulePath(value string, modules []api.SDModule) string {
+	if value == "" || strings.HasPrefix(value, "/") {
+		return value
+	}
+	for _, m := range modules {
+		if m.ModelName == value {
+			return m.Filename
+		}
+	}
+	return value
+}
+
+// resolveOverrideModules resolves model names in forge_additional_modules
+// to full paths using the provided modules list.
+func resolveOverrideModules(settings map[string]any, modules []api.SDModule) map[string]any {
+	if settings == nil {
+		return nil
+	}
+	raw, ok := settings["forge_additional_modules"]
+	if !ok {
+		return settings
+	}
+
+	var names []string
+	switch v := raw.(type) {
+	case []string:
+		names = v
+	case []any:
+		for _, item := range v {
+			if s, ok := item.(string); ok {
+				names = append(names, s)
+			}
+		}
+	}
+
+	resolved := make([]string, len(names))
+	for i, n := range names {
+		resolved[i] = resolveModulePath(n, modules)
+	}
+
+	result := make(map[string]any, len(settings))
+	maps.Copy(result, settings)
+	result["forge_additional_modules"] = resolved
+	return result
+}
+
 func buildAdditionalModules(vae, textEncoder string) map[string]any {
 	var modules []string
 	if vae != "" {

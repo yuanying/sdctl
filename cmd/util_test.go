@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"reflect"
 	"testing"
+
+	"github.com/yuanying/sdctl/internal/api"
 )
 
 func TestResolveUniqueFilePath_NoFile_NotBatch(t *testing.T) {
@@ -227,6 +229,97 @@ func TestMergeMap_OverrideTakesPrecedence(t *testing.T) {
 	expected := map[string]any{"a": 1, "b": 99, "c": 3}
 	if !reflect.DeepEqual(got, expected) {
 		t.Errorf("expected %v, got %v", expected, got)
+	}
+}
+
+func TestResolveModulePath_Empty(t *testing.T) {
+	if got := resolveModulePath("", nil); got != "" {
+		t.Errorf("expected empty, got %q", got)
+	}
+}
+
+func TestResolveModulePath_AbsolutePath(t *testing.T) {
+	path := "/mnt/data/models/VAE/sdxl_vae.safetensors"
+	if got := resolveModulePath(path, nil); got != path {
+		t.Errorf("expected %q, got %q", path, got)
+	}
+}
+
+func TestResolveModulePath_ModelNameFound(t *testing.T) {
+	modules := []api.SDModule{
+		{ModelName: "sdxl_vae.safetensors", Filename: "/mnt/data/models/VAE/sdxl_vae.safetensors"},
+		{ModelName: "qwen_3_06b_base.safetensors", Filename: "/mnt/data/models/text_encoder/qwen_3_06b_base.safetensors"},
+	}
+	got := resolveModulePath("sdxl_vae.safetensors", modules)
+	if got != "/mnt/data/models/VAE/sdxl_vae.safetensors" {
+		t.Errorf("expected resolved path, got %q", got)
+	}
+}
+
+func TestResolveModulePath_ModelNameNotFound(t *testing.T) {
+	modules := []api.SDModule{
+		{ModelName: "sdxl_vae.safetensors", Filename: "/mnt/data/models/VAE/sdxl_vae.safetensors"},
+	}
+	got := resolveModulePath("unknown.safetensors", modules)
+	if got != "unknown.safetensors" {
+		t.Errorf("expected original value, got %q", got)
+	}
+}
+
+func TestResolveOverrideModules_NilSettings(t *testing.T) {
+	if got := resolveOverrideModules(nil, nil); got != nil {
+		t.Errorf("expected nil, got %v", got)
+	}
+}
+
+func TestResolveOverrideModules_NoForgeKey(t *testing.T) {
+	settings := map[string]any{"other_key": "value"}
+	got := resolveOverrideModules(settings, nil)
+	if got["other_key"] != "value" {
+		t.Errorf("unexpected result: %v", got)
+	}
+}
+
+func TestResolveOverrideModules_ResolvesNames(t *testing.T) {
+	modules := []api.SDModule{
+		{ModelName: "sdxl_vae.safetensors", Filename: "/models/VAE/sdxl_vae.safetensors"},
+		{ModelName: "qwen_3_06b_base.safetensors", Filename: "/models/te/qwen_3_06b_base.safetensors"},
+	}
+	settings := map[string]any{
+		"forge_additional_modules": []any{"sdxl_vae.safetensors", "qwen_3_06b_base.safetensors"},
+	}
+	got := resolveOverrideModules(settings, modules)
+	list := got["forge_additional_modules"].([]string)
+	if list[0] != "/models/VAE/sdxl_vae.safetensors" {
+		t.Errorf("expected resolved path, got %q", list[0])
+	}
+	if list[1] != "/models/te/qwen_3_06b_base.safetensors" {
+		t.Errorf("expected resolved path, got %q", list[1])
+	}
+}
+
+func TestResolveOverrideModules_KeepsAbsolutePaths(t *testing.T) {
+	settings := map[string]any{
+		"forge_additional_modules": []any{"/already/full/path.safetensors"},
+	}
+	got := resolveOverrideModules(settings, nil)
+	list := got["forge_additional_modules"].([]string)
+	if list[0] != "/already/full/path.safetensors" {
+		t.Errorf("expected unchanged path, got %q", list[0])
+	}
+}
+
+func TestResolveOverrideModules_StringSliceInput(t *testing.T) {
+	modules := []api.SDModule{
+		{ModelName: "sdxl_vae.safetensors", Filename: "/models/VAE/sdxl_vae.safetensors"},
+	}
+	settings := map[string]any{
+		"forge_additional_modules": []string{"sdxl_vae.safetensors"},
+	}
+	got := resolveOverrideModules(settings, modules)
+	list := got["forge_additional_modules"].([]string)
+	if list[0] != "/models/VAE/sdxl_vae.safetensors" {
+		t.Errorf("expected resolved path, got %q", list[0])
 	}
 }
 

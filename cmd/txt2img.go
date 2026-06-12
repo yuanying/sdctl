@@ -85,6 +85,13 @@ func runTxt2Img(cmd *cobra.Command, args []string) error {
 			resolveFlag(cmd, "text-encoder", txt2imgFlags.textEncoder),
 		),
 	)
+	if overrideSettings != nil {
+		modules, err := client.ListSDModules()
+		if err != nil {
+			return fmt.Errorf("error fetching modules: %w", err)
+		}
+		overrideSettings = resolveOverrideModules(overrideSettings, modules)
+	}
 	req := api.Txt2ImgRequest{
 		Prompt:                            prompt,
 		NegativePrompt:                    resolveNegativePrompt(cmd, txt2imgFlags.negativePrompt, promptCfg, paramCfg),
