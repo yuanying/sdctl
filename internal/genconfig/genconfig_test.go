@@ -23,6 +23,10 @@ seed: 12345
 batch_count: 2
 batch_size: 3
 denoising_strength: 0.6
+override_settings:
+  forge_additional_modules:
+    - "/models/VAE/my_vae.safetensors"
+    - "/models/text_encoder/my_te.safetensors"
 `
 	os.WriteFile(path, []byte(content), 0644)
 
@@ -63,6 +67,16 @@ denoising_strength: 0.6
 	}
 	if cfg.DenoisingStrength == nil || *cfg.DenoisingStrength != 0.6 {
 		t.Errorf("unexpected DenoisingStrength: %v", cfg.DenoisingStrength)
+	}
+	if cfg.OverrideSettings == nil {
+		t.Fatalf("expected OverrideSettings to be set")
+	}
+	modules, ok := cfg.OverrideSettings["forge_additional_modules"].([]any)
+	if !ok || len(modules) != 2 {
+		t.Fatalf("unexpected forge_additional_modules: %v", cfg.OverrideSettings["forge_additional_modules"])
+	}
+	if modules[0] != "/models/VAE/my_vae.safetensors" || modules[1] != "/models/text_encoder/my_te.safetensors" {
+		t.Errorf("unexpected forge_additional_modules values: %v", modules)
 	}
 }
 

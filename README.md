@@ -39,7 +39,12 @@ sdctl txt2img "a landscape" --steps 30 --width 768 --height 512 -o ./output/
 sdctl txt2img "a portrait" --negative "blurry, low quality" --cfg-scale 8
 sdctl txt2img "a cat" --batch-count 4 -o ./output/
 sdctl txt2img "a cat" --batch-size 2 --batch-count 3 -o result.png
-# → result.00.png, result.01.png, ..., result.05.png
+# → result.0001.png, result.0002.png, ..., result.0006.png
+
+# VAE / text encoder (required for some models e.g. anima)
+sdctl txt2img "anime girl" \
+  --vae /models/VAE/anima/qwen_image_vae.safetensors \
+  --text-encoder /models/text_encoder/anima/qwen_3_06b_base.safetensors
 
 # Using config files
 sdctl txt2img --params params.yaml --prompt prompt.yaml
@@ -76,6 +81,10 @@ seed: -1
 batch_count: 1
 batch_size: 1
 denoising_strength: 0.75  # img2img only
+override_settings:
+  forge_additional_modules:
+    - "/models/VAE/anima/qwen_image_vae.safetensors"
+    - "/models/text_encoder/anima/qwen_3_06b_base.safetensors"
 ```
 
 **Prompt file** (`prompt.yaml`) — positive prompt and optional negative prompt override:
@@ -103,18 +112,20 @@ sdctl models set SD1_QuinceMixV2
 ### Common flags (txt2img / img2img)
 
 ```
-    --params string     generation parameter config file (YAML)
-    --prompt string     prompt file (YAML)
--n, --negative string   negative prompt
-    --steps int         sampling steps (default 20)
-    --width int         image width (default 512)
-    --height int        image height (default 512)
-    --cfg-scale float   CFG scale (default 7)
-    --sampler string    sampler name (default "Euler a")
-    --seed int          seed, -1 for random (default -1)
-    --batch-count int   number of times to run generation (default 1)
-    --batch-size int    number of images per batch (default 1)
--o, --output string     output file or directory (default: current directory)
+    --params string        generation parameter config file (YAML)
+    --prompt string        prompt file (YAML)
+-n, --negative string      negative prompt
+    --steps int            sampling steps (default 20)
+    --width int            image width (default 512)
+    --height int           image height (default 512)
+    --cfg-scale float      CFG scale (default 7)
+    --sampler string       sampler name (default "Euler a")
+    --seed int             seed, -1 for random (default -1)
+    --batch-count int      number of times to run generation (default 1)
+    --batch-size int       number of images per batch (default 1)
+-o, --output string        output file or directory (default: current directory)
+    --vae string           VAE model path (sets forge_additional_modules[0])
+    --text-encoder string  text encoder model path (sets forge_additional_modules[1])
 ```
 
 > **Note:** When `--output` is a file path (e.g. `result.png`):

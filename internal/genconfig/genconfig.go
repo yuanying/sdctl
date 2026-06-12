@@ -7,17 +7,18 @@ import (
 )
 
 type ParamConfig struct {
-	NegativePrompt    *string  `yaml:"negative_prompt"`
-	Steps             *int     `yaml:"steps"`
-	Width             *int     `yaml:"width"`
-	Height            *int     `yaml:"height"`
-	CFGScale          *float64 `yaml:"cfg_scale"`
-	Sampler           *string  `yaml:"sampler"`
-	Scheduler         *string  `yaml:"scheduler"`
-	Seed              *int64   `yaml:"seed"`
-	BatchCount        *int     `yaml:"batch_count"`
-	BatchSize         *int     `yaml:"batch_size"`
-	DenoisingStrength *float64 `yaml:"denoising_strength"`
+	NegativePrompt    *string        `yaml:"negative_prompt"`
+	Steps             *int           `yaml:"steps"`
+	Width             *int           `yaml:"width"`
+	Height            *int           `yaml:"height"`
+	CFGScale          *float64       `yaml:"cfg_scale"`
+	Sampler           *string        `yaml:"sampler"`
+	Scheduler         *string        `yaml:"scheduler"`
+	Seed              *int64         `yaml:"seed"`
+	BatchCount        *int           `yaml:"batch_count"`
+	BatchSize         *int           `yaml:"batch_size"`
+	DenoisingStrength *float64       `yaml:"denoising_strength"`
+	OverrideSettings  map[string]any `yaml:"override_settings"`
 }
 
 type PromptConfig struct {
@@ -112,6 +113,13 @@ func (c *ParamConfig) NegativePromptValue() *string {
 		return nil
 	}
 	return c.NegativePrompt
+}
+
+func (c *ParamConfig) OverrideSettingsValue() map[string]any {
+	if c == nil {
+		return nil
+	}
+	return c.OverrideSettings
 }
 
 func LoadPromptConfig(path string) (*PromptConfig, error) {

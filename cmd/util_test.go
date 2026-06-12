@@ -3,6 +3,7 @@ package cmd
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 )
 
@@ -194,6 +195,75 @@ func TestSaveImages_MultipleWithDir(t *testing.T) {
 	}
 	if filepath.Base(paths[0]) == filepath.Base(paths[1]) {
 		t.Errorf("expected different filenames, got same: %s", paths[0])
+	}
+}
+
+func TestMergeMap_BothNil(t *testing.T) {
+	if got := mergeMap(nil, nil); got != nil {
+		t.Errorf("expected nil, got %v", got)
+	}
+}
+
+func TestMergeMap_BaseOnly(t *testing.T) {
+	base := map[string]any{"a": 1}
+	got := mergeMap(base, nil)
+	if !reflect.DeepEqual(got, base) {
+		t.Errorf("expected %v, got %v", base, got)
+	}
+}
+
+func TestMergeMap_OverrideOnly(t *testing.T) {
+	override := map[string]any{"a": 2}
+	got := mergeMap(nil, override)
+	if !reflect.DeepEqual(got, override) {
+		t.Errorf("expected %v, got %v", override, got)
+	}
+}
+
+func TestMergeMap_OverrideTakesPrecedence(t *testing.T) {
+	base := map[string]any{"a": 1, "b": 2}
+	override := map[string]any{"b": 99, "c": 3}
+	got := mergeMap(base, override)
+	expected := map[string]any{"a": 1, "b": 99, "c": 3}
+	if !reflect.DeepEqual(got, expected) {
+		t.Errorf("expected %v, got %v", expected, got)
+	}
+}
+
+func TestBuildAdditionalModules_BothSet(t *testing.T) {
+	got := buildAdditionalModules("/path/to/vae.safetensors", "/path/to/te.safetensors")
+	expected := map[string]any{
+		"forge_additional_modules": []string{"/path/to/vae.safetensors", "/path/to/te.safetensors"},
+	}
+	if !reflect.DeepEqual(got, expected) {
+		t.Errorf("expected %v, got %v", expected, got)
+	}
+}
+
+func TestBuildAdditionalModules_VAEOnly(t *testing.T) {
+	got := buildAdditionalModules("/path/to/vae.safetensors", "")
+	expected := map[string]any{
+		"forge_additional_modules": []string{"/path/to/vae.safetensors"},
+	}
+	if !reflect.DeepEqual(got, expected) {
+		t.Errorf("expected %v, got %v", expected, got)
+	}
+}
+
+func TestBuildAdditionalModules_TextEncoderOnly(t *testing.T) {
+	got := buildAdditionalModules("", "/path/to/te.safetensors")
+	expected := map[string]any{
+		"forge_additional_modules": []string{"/path/to/te.safetensors"},
+	}
+	if !reflect.DeepEqual(got, expected) {
+		t.Errorf("expected %v, got %v", expected, got)
+	}
+}
+
+func TestBuildAdditionalModules_NoneSet(t *testing.T) {
+	got := buildAdditionalModules("", "")
+	if got != nil {
+		t.Errorf("expected nil, got %v", got)
 	}
 }
 

@@ -3,6 +3,7 @@ package cmd
 import (
 	"encoding/base64"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -65,6 +66,51 @@ func resolveString(cmd *cobra.Command, flagName string, flagVal string, cfgVal *
 		return flagVal
 	}
 	return *cfgVal
+}
+
+func buildAdditionalModules(vae, textEncoder string) map[string]any {
+	var modules []string
+	if vae != "" {
+		modules = append(modules, vae)
+	}
+	if textEncoder != "" {
+		modules = append(modules, textEncoder)
+	}
+	if len(modules) == 0 {
+		return nil
+	}
+	return map[string]any{
+		"forge_additional_modules": modules,
+	}
+}
+
+// resolveFlag returns the flag value only when the flag was explicitly set on the command line.
+func resolveFlag(cmd *cobra.Command, flagName, flagVal string) string {
+	if cmd.Flags().Changed(flagName) {
+		return flagVal
+	}
+	return ""
+}
+
+func boolPtrIfSet(m map[string]any) *bool {
+	if m == nil {
+		return nil
+	}
+	t := true
+	return &t
+}
+
+func mergeMap(base, override map[string]any) map[string]any {
+	if override == nil {
+		return base
+	}
+	if base == nil {
+		return override
+	}
+	result := make(map[string]any, len(base)+len(override))
+	maps.Copy(result, base)
+	maps.Copy(result, override)
+	return result
 }
 
 func validateSampler(name string) error {

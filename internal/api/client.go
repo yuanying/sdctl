@@ -21,17 +21,19 @@ func NewClient(baseURL string) *Client {
 }
 
 type Txt2ImgRequest struct {
-	Prompt         string  `json:"prompt"`
-	NegativePrompt string  `json:"negative_prompt,omitempty"`
-	Steps          int     `json:"steps"`
-	Width          int     `json:"width"`
-	Height         int     `json:"height"`
-	CFGScale       float64 `json:"cfg_scale"`
-	SamplerName    string  `json:"sampler_name,omitempty"`
-	SchedulerName  string  `json:"scheduler,omitempty"`
-	Seed           int64   `json:"seed,omitempty"`
-	BatchCount     int     `json:"n_iter,omitempty"`
-	BatchSize      int     `json:"batch_size,omitempty"`
+	Prompt                            string         `json:"prompt"`
+	NegativePrompt                    string         `json:"negative_prompt,omitempty"`
+	Steps                             int            `json:"steps"`
+	Width                             int            `json:"width"`
+	Height                            int            `json:"height"`
+	CFGScale                          float64        `json:"cfg_scale"`
+	SamplerName                       string         `json:"sampler_name,omitempty"`
+	SchedulerName                     string         `json:"scheduler,omitempty"`
+	Seed                              int64          `json:"seed,omitempty"`
+	BatchCount                        int            `json:"n_iter,omitempty"`
+	BatchSize                         int            `json:"batch_size,omitempty"`
+	OverrideSettings                  map[string]any `json:"override_settings,omitempty"`
+	OverrideSettingsRestoreAfterwards *bool          `json:"override_settings_restore_afterwards,omitempty"`
 }
 
 type Img2ImgRequest struct {

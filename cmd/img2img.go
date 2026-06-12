@@ -32,6 +32,8 @@ var img2imgFlags struct {
 	output            string
 	paramsFile        string
 	promptFile        string
+	vae               string
+	textEncoder       string
 }
 
 func init() {
@@ -50,6 +52,8 @@ func init() {
 	f.StringVarP(&img2imgFlags.output, "output", "o", "", "output file or directory")
 	f.StringVar(&img2imgFlags.paramsFile, "params", "", "generation parameter config file (YAML)")
 	f.StringVar(&img2imgFlags.promptFile, "prompt", "", "prompt file (YAML)")
+	f.StringVar(&img2imgFlags.vae, "vae", "", "VAE model path (forge_additional_modules)")
+	f.StringVar(&img2imgFlags.textEncoder, "text-encoder", "", "text encoder model path (forge_additional_modules)")
 
 	rootCmd.AddCommand(img2imgCmd)
 }
@@ -98,19 +102,28 @@ func runImg2Img(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("error: cannot read image %s: %w", imagePath, err)
 	}
 
+	overrideSettings := mergeMap(
+		paramCfg.OverrideSettingsValue(),
+		buildAdditionalModules(
+			resolveFlag(cmd, "vae", img2imgFlags.vae),
+			resolveFlag(cmd, "text-encoder", img2imgFlags.textEncoder),
+		),
+	)
 	req := api.Img2ImgRequest{
 		Txt2ImgRequest: api.Txt2ImgRequest{
-			Prompt:         prompt,
-			NegativePrompt: resolveNegativePrompt(cmd, img2imgFlags.negativePrompt, promptCfg, paramCfg),
-			Steps:          resolveInt(cmd, "steps", img2imgFlags.steps, paramCfg.StepsValue()),
-			Width:          resolveInt(cmd, "width", img2imgFlags.width, paramCfg.WidthValue()),
-			Height:         resolveInt(cmd, "height", img2imgFlags.height, paramCfg.HeightValue()),
-			CFGScale:       resolveFloat64(cmd, "cfg-scale", img2imgFlags.cfgScale, paramCfg.CFGScaleValue()),
-			SamplerName:    resolveString(cmd, "sampler", img2imgFlags.sampler, paramCfg.SamplerValue()),
-			SchedulerName:  resolveString(cmd, "scheduler", img2imgFlags.scheduler, paramCfg.SchedulerValue()),
-			Seed:           resolveInt64(cmd, "seed", img2imgFlags.seed, paramCfg.SeedValue()),
-			BatchCount:     resolveInt(cmd, "batch-count", img2imgFlags.batchCount, paramCfg.BatchCountValue()),
-			BatchSize:      resolveInt(cmd, "batch-size", img2imgFlags.batchSize, paramCfg.BatchSizeValue()),
+			Prompt:                            prompt,
+			NegativePrompt:                    resolveNegativePrompt(cmd, img2imgFlags.negativePrompt, promptCfg, paramCfg),
+			Steps:                             resolveInt(cmd, "steps", img2imgFlags.steps, paramCfg.StepsValue()),
+			Width:                             resolveInt(cmd, "width", img2imgFlags.width, paramCfg.WidthValue()),
+			Height:                            resolveInt(cmd, "height", img2imgFlags.height, paramCfg.HeightValue()),
+			CFGScale:                          resolveFloat64(cmd, "cfg-scale", img2imgFlags.cfgScale, paramCfg.CFGScaleValue()),
+			SamplerName:                       resolveString(cmd, "sampler", img2imgFlags.sampler, paramCfg.SamplerValue()),
+			SchedulerName:                     resolveString(cmd, "scheduler", img2imgFlags.scheduler, paramCfg.SchedulerValue()),
+			Seed:                              resolveInt64(cmd, "seed", img2imgFlags.seed, paramCfg.SeedValue()),
+			BatchCount:                        resolveInt(cmd, "batch-count", img2imgFlags.batchCount, paramCfg.BatchCountValue()),
+			BatchSize:                         resolveInt(cmd, "batch-size", img2imgFlags.batchSize, paramCfg.BatchSizeValue()),
+			OverrideSettings:                  overrideSettings,
+			OverrideSettingsRestoreAfterwards: boolPtrIfSet(overrideSettings),
 		},
 		InitImages:        []string{base64.StdEncoding.EncodeToString(imageData)},
 		DenoisingStrength: resolveFloat64(cmd, "denoising", img2imgFlags.denoisingStrength, paramCfg.DenoisingStrengthValue()),
