@@ -269,6 +269,35 @@ func TestTxt2ImgWithScheduler(t *testing.T) {
 	}
 }
 
+func TestListSDModules(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/sdapi/v1/sd-modules" || r.Method != http.MethodGet {
+			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		resp := []api.SDModule{
+			{ModelName: "qwen_3_06b_base.safetensors", Filename: "/models/text_encoder/qwen_3_06b_base.safetensors"},
+			{ModelName: "sdxl_vae.safetensors", Filename: "/models/VAE/sdxl_vae.safetensors"},
+		}
+		json.NewEncoder(w).Encode(resp)
+	}))
+	defer server.Close()
+
+	client := api.NewClient(server.URL)
+	modules, err := client.ListSDModules()
+	if err != nil {
+		t.Fatalf("ListSDModules failed: %v", err)
+	}
+	if len(modules) != 2 {
+		t.Errorf("expected 2 modules, got %d", len(modules))
+	}
+	if modules[0].ModelName != "qwen_3_06b_base.safetensors" {
+		t.Errorf("unexpected ModelName: %s", modules[0].ModelName)
+	}
+	if modules[1].Filename != "/models/VAE/sdxl_vae.safetensors" {
+		t.Errorf("unexpected Filename: %s", modules[1].Filename)
+	}
+}
+
 func TestConnectionError(t *testing.T) {
 	client := api.NewClient("http://localhost:1")
 	_, err := client.ListModels()

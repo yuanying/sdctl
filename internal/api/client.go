@@ -21,17 +21,19 @@ func NewClient(baseURL string) *Client {
 }
 
 type Txt2ImgRequest struct {
-	Prompt         string  `json:"prompt"`
-	NegativePrompt string  `json:"negative_prompt,omitempty"`
-	Steps          int     `json:"steps"`
-	Width          int     `json:"width"`
-	Height         int     `json:"height"`
-	CFGScale       float64 `json:"cfg_scale"`
-	SamplerName    string  `json:"sampler_name,omitempty"`
-	SchedulerName  string  `json:"scheduler,omitempty"`
-	Seed           int64   `json:"seed,omitempty"`
-	BatchCount     int     `json:"n_iter,omitempty"`
-	BatchSize      int     `json:"batch_size,omitempty"`
+	Prompt                            string         `json:"prompt"`
+	NegativePrompt                    string         `json:"negative_prompt,omitempty"`
+	Steps                             int            `json:"steps"`
+	Width                             int            `json:"width"`
+	Height                            int            `json:"height"`
+	CFGScale                          float64        `json:"cfg_scale"`
+	SamplerName                       string         `json:"sampler_name,omitempty"`
+	SchedulerName                     string         `json:"scheduler,omitempty"`
+	Seed                              int64          `json:"seed,omitempty"`
+	BatchCount                        int            `json:"n_iter,omitempty"`
+	BatchSize                         int            `json:"batch_size,omitempty"`
+	OverrideSettings                  map[string]any `json:"override_settings,omitempty"`
+	OverrideSettingsRestoreAfterwards *bool          `json:"override_settings_restore_afterwards,omitempty"`
 }
 
 type Img2ImgRequest struct {
@@ -72,6 +74,11 @@ type Sampler struct {
 type Scheduler struct {
 	Name  string `json:"name"`
 	Label string `json:"label"`
+}
+
+type SDModule struct {
+	ModelName string `json:"model_name"`
+	Filename  string `json:"filename"`
 }
 
 func (c *Client) post(path string, body any) (*http.Response, error) {
@@ -178,6 +185,19 @@ func (c *Client) ListSchedulers() ([]Scheduler, error) {
 		return nil, err
 	}
 	return schedulers, nil
+}
+
+func (c *Client) ListSDModules() ([]SDModule, error) {
+	resp, err := c.get("/sdapi/v1/sd-modules")
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	var modules []SDModule
+	if err := json.NewDecoder(resp.Body).Decode(&modules); err != nil {
+		return nil, err
+	}
+	return modules, nil
 }
 
 func (c *Client) SetModel(modelName string) error {

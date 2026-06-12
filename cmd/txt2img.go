@@ -29,6 +29,8 @@ var txt2imgFlags struct {
 	output         string
 	paramsFile     string
 	promptFile     string
+	vae            string
+	textEncoder    string
 }
 
 func init() {
@@ -46,6 +48,8 @@ func init() {
 	f.StringVarP(&txt2imgFlags.output, "output", "o", "", "output file or directory")
 	f.StringVar(&txt2imgFlags.paramsFile, "params", "", "generation parameter config file (YAML)")
 	f.StringVar(&txt2imgFlags.promptFile, "prompt", "", "prompt file (YAML)")
+	f.StringVar(&txt2imgFlags.vae, "vae", "", "VAE model path (forge_additional_modules)")
+	f.StringVar(&txt2imgFlags.textEncoder, "text-encoder", "", "text encoder model path (forge_additional_modules)")
 
 	rootCmd.AddCommand(txt2imgCmd)
 }
@@ -74,18 +78,34 @@ func runTxt2Img(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	overrideSettings := mergeMap(
+		paramCfg.OverrideSettingsValue(),
+		buildAdditionalModules(
+			resolveFlag(cmd, "vae", txt2imgFlags.vae),
+			resolveFlag(cmd, "text-encoder", txt2imgFlags.textEncoder),
+		),
+	)
+	if overrideSettings != nil {
+		modules, err := client.ListSDModules()
+		if err != nil {
+			return fmt.Errorf("error fetching modules: %w", err)
+		}
+		overrideSettings = resolveOverrideModules(overrideSettings, modules)
+	}
 	req := api.Txt2ImgRequest{
-		Prompt:         prompt,
-		NegativePrompt: resolveNegativePrompt(cmd, txt2imgFlags.negativePrompt, promptCfg, paramCfg),
-		Steps:          resolveInt(cmd, "steps", txt2imgFlags.steps, paramCfg.StepsValue()),
-		Width:          resolveInt(cmd, "width", txt2imgFlags.width, paramCfg.WidthValue()),
-		Height:         resolveInt(cmd, "height", txt2imgFlags.height, paramCfg.HeightValue()),
-		CFGScale:       resolveFloat64(cmd, "cfg-scale", txt2imgFlags.cfgScale, paramCfg.CFGScaleValue()),
-		SamplerName:    resolveString(cmd, "sampler", txt2imgFlags.sampler, paramCfg.SamplerValue()),
-		SchedulerName:  resolveString(cmd, "scheduler", txt2imgFlags.scheduler, paramCfg.SchedulerValue()),
-		Seed:           resolveInt64(cmd, "seed", txt2imgFlags.seed, paramCfg.SeedValue()),
-		BatchCount:     resolveInt(cmd, "batch-count", txt2imgFlags.batchCount, paramCfg.BatchCountValue()),
-		BatchSize:      resolveInt(cmd, "batch-size", txt2imgFlags.batchSize, paramCfg.BatchSizeValue()),
+		Prompt:                            prompt,
+		NegativePrompt:                    resolveNegativePrompt(cmd, txt2imgFlags.negativePrompt, promptCfg, paramCfg),
+		Steps:                             resolveInt(cmd, "steps", txt2imgFlags.steps, paramCfg.StepsValue()),
+		Width:                             resolveInt(cmd, "width", txt2imgFlags.width, paramCfg.WidthValue()),
+		Height:                            resolveInt(cmd, "height", txt2imgFlags.height, paramCfg.HeightValue()),
+		CFGScale:                          resolveFloat64(cmd, "cfg-scale", txt2imgFlags.cfgScale, paramCfg.CFGScaleValue()),
+		SamplerName:                       resolveString(cmd, "sampler", txt2imgFlags.sampler, paramCfg.SamplerValue()),
+		SchedulerName:                     resolveString(cmd, "scheduler", txt2imgFlags.scheduler, paramCfg.SchedulerValue()),
+		Seed:                              resolveInt64(cmd, "seed", txt2imgFlags.seed, paramCfg.SeedValue()),
+		BatchCount:                        resolveInt(cmd, "batch-count", txt2imgFlags.batchCount, paramCfg.BatchCountValue()),
+		BatchSize:                         resolveInt(cmd, "batch-size", txt2imgFlags.batchSize, paramCfg.BatchSizeValue()),
+		OverrideSettings:                  overrideSettings,
+		OverrideSettingsRestoreAfterwards: boolPtrIfSet(overrideSettings),
 	}
 
 	if cmd.Flags().Changed("sampler") {
