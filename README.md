@@ -103,6 +103,14 @@ sdctl models list
 sdctl models set SD1_QuinceMixV2
 ```
 
+### modules
+
+```bash
+sdctl modules
+```
+
+VAE とテキストエンコーダーの一覧を表示します。`--vae` / `--text-encoder` フラグや `params.yaml` の `override_settings.forge_additional_modules` に指定するファイルパスを確認できます。
+
 ### Global flags
 
 ```

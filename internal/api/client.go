@@ -76,6 +76,11 @@ type Scheduler struct {
 	Label string `json:"label"`
 }
 
+type SDModule struct {
+	ModelName string `json:"model_name"`
+	Filename  string `json:"filename"`
+}
+
 func (c *Client) post(path string, body any) (*http.Response, error) {
 	data, err := json.Marshal(body)
 	if err != nil {
@@ -180,6 +185,19 @@ func (c *Client) ListSchedulers() ([]Scheduler, error) {
 		return nil, err
 	}
 	return schedulers, nil
+}
+
+func (c *Client) ListSDModules() ([]SDModule, error) {
+	resp, err := c.get("/sdapi/v1/sd-modules")
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	var modules []SDModule
+	if err := json.NewDecoder(resp.Body).Decode(&modules); err != nil {
+		return nil, err
+	}
+	return modules, nil
 }
 
 func (c *Client) SetModel(modelName string) error {
