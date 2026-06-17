@@ -1,0 +1,209 @@
+{
+  "skill_name": "sd-generate",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "夕暮れの富士山の画像を生成してください。",
+      "expected_output": "txt2img インテントを判定し、プロンプト（Mount Fuji at sunset 相当）でパラメータを確認しながら sdctl txt2img コマンドを実行し、生成された画像のパスを報告する。必要に応じて --cfg-scale, --sampler, --scheduler, --seed, batch 系フラグを扱う",
+      "files": [],
+      "assertions": [
+        {
+          "name": "uses_txt2img",
+          "description": "txt2img コマンドを使用する",
+          "type": "contains_any",
+          "patterns": ["txt2img", "sdctl txt2img"]
+        },
+        {
+          "name": "mentions_fuji_prompt",
+          "description": "富士山に関するプロンプトが含まれる",
+          "type": "contains_any",
+          "patterns": ["Fuji", "fuji", "富士山", "sunset", "夕暮れ"]
+        },
+        {
+          "name": "requests_parameters",
+          "description": "パラメータ（サイズ・ステップ数など）を確認するか、デフォルト値を使用する",
+          "type": "contains_any",
+          "patterns": ["512", "width", "steps", "cfg", "sampler", "seed", "ステップ", "サイズ", "output"]
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "この画像 ./photo.jpg を水彩画風に変換してください。",
+      "expected_output": "img2img インテントを判定し、入力画像パス（./photo.jpg）とデノイジング強度を確認しながら sdctl img2img コマンドを実行し、変換後の画像パスを報告する。必要に応じて width/height, steps, cfg-scale, sampler, scheduler, seed, batch 系フラグを扱う",
+      "files": [],
+      "assertions": [
+        {
+          "name": "uses_img2img",
+          "description": "img2img コマンドを使用する",
+          "type": "contains_any",
+          "patterns": ["img2img", "sdctl img2img"]
+        },
+        {
+          "name": "mentions_input_image",
+          "description": "入力画像パスへの言及がある",
+          "type": "contains_any",
+          "patterns": ["photo.jpg", "./photo.jpg"]
+        },
+        {
+          "name": "mentions_watercolor",
+          "description": "水彩風に関するプロンプトが含まれる",
+          "type": "contains_any",
+          "patterns": ["watercolor", "水彩", "watercolour"]
+        },
+        {
+          "name": "mentions_denoising",
+          "description": "デノイジング強度を言及または使用する",
+          "type": "contains_any",
+          "patterns": ["denoising", "デノイジング", "0.75", "0."]
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "base.png をスケール1.25倍でlatentアップスケールしてください。プロンプトは「anime girl」です。",
+      "expected_output": "hires インテントを判定し、入力画像(base.png)・プロンプト・スケール(1.25)・ステップ数・デノイジング強度を確認しながら sdctl hires コマンドを実行し、出力画像パスを報告する",
+      "files": [],
+      "assertions": [
+        {
+          "name": "uses_hires",
+          "description": "hires コマンドを使用する",
+          "type": "contains_any",
+          "patterns": ["sdctl hires", "hires base.png"]
+        },
+        {
+          "name": "mentions_scale",
+          "description": "スケール倍率を指定する",
+          "type": "contains_any",
+          "patterns": ["--scale", "1.25", "scale"]
+        },
+        {
+          "name": "mentions_input_image",
+          "description": "入力画像ファイルへの言及がある",
+          "type": "contains_any",
+          "patterns": ["base.png"]
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "利用可能なStable Diffusionのモデルを一覧表示してください。",
+      "expected_output": "models インテントを判定し、sdctl models list を実行してモデル一覧を表示する",
+      "files": [],
+      "assertions": [
+        {
+          "name": "uses_models_list",
+          "description": "sdctl models list コマンドを使用する",
+          "type": "contains_any",
+          "patterns": ["models list", "sdctl models"]
+        },
+        {
+          "name": "shows_model_list",
+          "description": "モデル一覧の表示や実行結果への言及がある",
+          "type": "contains_any",
+          "patterns": ["モデル", "model", "一覧", "list"]
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "使えるアップスケーラーを確認してください。",
+      "expected_output": "upscalers インテントを判定し、sdctl upscalers を実行してアップスケーラー一覧を表示する",
+      "files": [],
+      "assertions": [
+        {
+          "name": "uses_upscalers",
+          "description": "sdctl upscalers コマンドを使用する",
+          "type": "contains_any",
+          "patterns": ["sdctl upscalers", "upscalers"]
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "使えるサンプラーとスケジューラーを確認してください。",
+      "expected_output": "samplers と schedulers の管理インテントを判定し、sdctl samplers list と sdctl schedulers list を実行して一覧を表示する",
+      "files": [],
+      "assertions": [
+        {
+          "name": "uses_samplers_list",
+          "description": "sdctl samplers list コマンドを使用する",
+          "type": "contains_any",
+          "patterns": ["samplers list", "sdctl samplers"]
+        },
+        {
+          "name": "uses_schedulers_list",
+          "description": "sdctl schedulers list コマンドを使用する",
+          "type": "contains_any",
+          "patterns": ["schedulers list", "sdctl schedulers"]
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "seed 12345、CFG 6.5、DPM++ 2M sampler、Karras scheduler で猫の画像を2枚生成してください。",
+      "expected_output": "txt2img インテントを判定し、seed/CFG/sampler/scheduler/batch 指定を sdctl txt2img の --seed, --cfg-scale, --sampler, --scheduler, --batch-size 2 に反映して実行する",
+      "files": [],
+      "assertions": [
+        {
+          "name": "uses_generation_parameters",
+          "description": "新しい生成パラメータをコマンドまたはサマリーに含める",
+          "type": "contains_any",
+          "patterns": ["--seed", "12345", "--cfg-scale", "6.5", "--sampler", "--scheduler", "--batch-size 2", "batch_size: 2"]
+        },
+        {
+          "name": "uses_txt2img_for_cat",
+          "description": "猫のtxt2img生成として扱う",
+          "type": "contains_any",
+          "patterns": ["txt2img", "cat", "猫"]
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "prompt": "アニメ少女の画像を生成後、Hires. fix で1.25倍にアップスケールしてください。",
+      "expected_output": "txt2img インテントと hires-fix フラグを判定し、--hires-fix --hr-scale 1.25 を付けた sdctl txt2img コマンドを実行する",
+      "files": [],
+      "assertions": [
+        {
+          "name": "uses_hires_fix_flag",
+          "description": "--hires-fix フラグを使用する",
+          "type": "contains_any",
+          "patterns": ["--hires-fix", "hires-fix", "hires_fix", "enable_hr"]
+        },
+        {
+          "name": "uses_hr_scale",
+          "description": "アップスケール倍率を指定する",
+          "type": "contains_any",
+          "patterns": ["--hr-scale", "hr_scale", "1.25"]
+        },
+        {
+          "name": "uses_txt2img",
+          "description": "txt2img コマンドを使用する",
+          "type": "contains_any",
+          "patterns": ["sdctl txt2img", "txt2img"]
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "prompt": "kutara_aki/02_curiosity_and_revelation/params.yaml と prompt_01_1.yaml を使って画像生成してください。",
+      "expected_output": "既存の params.yaml と prompt YAML を使う txt2img と判定し、batch_size: 2 または --batch-size 2 を前提に sdctl txt2img --params ... --prompt ... を実行して出力パスを報告する",
+      "files": [],
+      "assertions": [
+        {
+          "name": "uses_params_prompt_files",
+          "description": "--params と --prompt を使用する",
+          "type": "contains_any",
+          "patterns": ["--params", "params.yaml", "--prompt", "prompt_01_1.yaml", "--batch-size 2", "batch_size: 2"]
+        },
+        {
+          "name": "uses_txt2img",
+          "description": "txt2img コマンドを使用する",
+          "type": "contains_any",
+          "patterns": ["sdctl txt2img", "txt2img"]
+        }
+      ]
+    }
+  ]
+}
