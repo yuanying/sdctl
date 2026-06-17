@@ -34,6 +34,11 @@ type Txt2ImgRequest struct {
 	BatchSize                         int            `json:"batch_size,omitempty"`
 	OverrideSettings                  map[string]any `json:"override_settings,omitempty"`
 	OverrideSettingsRestoreAfterwards *bool          `json:"override_settings_restore_afterwards,omitempty"`
+	EnableHR                          bool           `json:"enable_hr,omitempty"`
+	HRScale                           float64        `json:"hr_scale,omitempty"`
+	HRUpscaler                        string         `json:"hr_upscaler,omitempty"`
+	HRSecondPassSteps                 int            `json:"hr_second_pass_steps,omitempty"`
+	DenoisingStrength                 float64        `json:"denoising_strength,omitempty"`
 }
 
 type Img2ImgRequest struct {
@@ -79,6 +84,12 @@ type Scheduler struct {
 type SDModule struct {
 	ModelName string `json:"model_name"`
 	Filename  string `json:"filename"`
+}
+
+type Upscaler struct {
+	Name      string  `json:"name"`
+	ModelName *string `json:"model_name"`
+	Scale     float64 `json:"scale"`
 }
 
 func (c *Client) post(path string, body any) (*http.Response, error) {
@@ -198,6 +209,19 @@ func (c *Client) ListSDModules() ([]SDModule, error) {
 		return nil, err
 	}
 	return modules, nil
+}
+
+func (c *Client) ListUpscalers() ([]Upscaler, error) {
+	resp, err := c.get("/sdapi/v1/upscalers")
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	var upscalers []Upscaler
+	if err := json.NewDecoder(resp.Body).Decode(&upscalers); err != nil {
+		return nil, err
+	}
+	return upscalers, nil
 }
 
 func (c *Client) SetModel(modelName string) error {

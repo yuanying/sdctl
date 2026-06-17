@@ -149,6 +149,14 @@ func resolveFlag(cmd *cobra.Command, flagName, flagVal string) string {
 	return ""
 }
 
+// resolveBool returns flagVal when the flag was explicitly set, otherwise falls back to cfgVal.
+func resolveBool(cmd *cobra.Command, flagName string, flagVal bool, cfgVal *bool) bool {
+	if cmd.Flags().Changed(flagName) || cfgVal == nil {
+		return flagVal
+	}
+	return *cfgVal
+}
+
 func boolPtrIfSet(m map[string]any) *bool {
 	if m == nil {
 		return nil

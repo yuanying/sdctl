@@ -54,6 +54,10 @@ sdctl txt2img "anime girl" \
 # Using config files
 sdctl txt2img --params params.yaml --prompt prompt.yaml
 sdctl txt2img "override prompt" --params params.yaml
+
+# Hires. fix (latent upscale during generation)
+sdctl txt2img "anime girl" --hires-fix --hr-scale 1.25 --hr-steps 25 --hr-denoise 0.30
+# Check available upscalers with: sdctl upscalers
 ```
 
 ### img2img
@@ -68,6 +72,30 @@ sdctl img2img "variations" input.png --batch-count 4 -o result.png
 # Using config files
 sdctl img2img --params params.yaml --prompt prompt.yaml input.png
 sdctl img2img "override prompt" --params params.yaml input.png
+```
+
+### hires
+
+```bash
+# Apply latent upscale + resampling to an existing image
+# Dimensions are scaled automatically: input × --scale → new width/height
+sdctl hires base.png "anime girl" --scale 1.25 --steps 35 --denoise 0.32 -o hires1.png
+
+# Multi-stage high-quality upscale (Anima Latent Upscale workflow)
+sdctl txt2img "anime girl" --steps 45 -o base.png
+sdctl hires base.png "anime girl" --scale 1.25 --steps 35 --denoise 0.32 -o hires1.png
+sdctl hires hires1.png "anime girl" --scale 1.15 --steps 30 --denoise 0.34 -o final.png
+
+# With model / VAE / text-encoder
+sdctl hires base.png "anime girl" \
+  --model anima_anima-base-v1.0 \
+  --vae qwen_image_vae.safetensors \
+  --text-encoder qwen_3_06b_base.safetensors \
+  --scale 1.25 --steps 35 --denoise 0.32
+
+# Using config files
+sdctl hires --params params.yaml --prompt prompt.yaml input.png
+sdctl hires "override prompt" --params params.yaml input.png
 ```
 
 ### Config file format
@@ -85,7 +113,12 @@ scheduler: "Karras"
 seed: -1
 batch_count: 1
 batch_size: 1
-denoising_strength: 0.75  # img2img only
+denoising_strength: 0.75  # img2img / hires only
+enable_hr: false           # txt2img: enable Hires. fix
+hr_scale: 1.25             # Hires. fix upscale factor
+hr_upscaler: "Latent (nearest)"  # see `sdctl upscalers`
+hr_second_pass_steps: 25   # 0 = same as steps
+hr_denoise: 0.30           # Hires. fix denoising strength
 override_settings:
   sd_model_checkpoint: "SD1_QuinceMixV2"   # model checkpoint (no validation)
   forge_additional_modules:
@@ -117,21 +150,31 @@ sdctl modules
 
 VAE とテキストエンコーダーの一覧を表示します。`--vae` / `--text-encoder` フラグや `params.yaml` の `override_settings.forge_additional_modules` に指定するファイルパスを確認できます。
 
+### upscalers
+
+```bash
+sdctl upscalers
+```
+
+利用可能なアップスケーラーの一覧を表示します。`--hr-upscaler`（`txt2img`）や `--upscaler`（`hires`）フラグに指定する名前を確認できます。
+
+Latent 系アップスケーラー（`Latent (nearest)` など）は `/sdapi/v1/latent-upscale-modes` エンドポイントで別途確認できます。
+
 ### Global flags
 
 ```
 --config string   config file path (default "~/.config/sdctl/config.yaml")
 ```
 
-### Common flags (txt2img / img2img)
+### Common flags (txt2img / img2img / hires)
 
 ```
     --params string        generation parameter config file (YAML)
     --prompt string        prompt file (YAML)
 -n, --negative string      negative prompt
     --steps int            sampling steps (default 20)
-    --width int            image width (default 512)
-    --height int           image height (default 512)
+    --width int            image width (default 512)  # not used in hires (auto-computed)
+    --height int           image height (default 512) # not used in hires (auto-computed)
     --cfg-scale float      CFG scale (default 7)
     --sampler string       sampler name (default "Euler a")
     --seed int             seed, -1 for random (default -1)
@@ -141,6 +184,24 @@ VAE とテキストエンコーダーの一覧を表示します。`--vae` / `--
     --model string         model checkpoint name (must match `sdctl models list` exactly)
     --vae string           VAE model path (sets forge_additional_modules[0])
     --text-encoder string  text encoder model path (sets forge_additional_modules[1])
+```
+
+### txt2img Hires. fix flags
+
+```
+    --hires-fix            enable Hires. fix
+    --hr-scale float       upscale factor (default 1.25)
+    --hr-upscaler string   upscaler name (default "Latent (nearest)", see `sdctl upscalers`)
+    --hr-steps int         second pass steps (default 0 = same as --steps)
+    --hr-denoise float     second pass denoising strength (default 0.30)
+```
+
+### hires flags
+
+```
+    --scale float          upscale factor applied to input image dimensions (default 1.25)
+    --denoise float        denoising strength (default 0.30)
+    --upscaler string      upscaler name (default "Latent (nearest)", see `sdctl upscalers`)
 ```
 
 > **Note:** When `--output` is a file path (e.g. `result.png`):
