@@ -19,6 +19,11 @@ type ParamConfig struct {
 	BatchSize         *int           `yaml:"batch_size"`
 	DenoisingStrength *float64       `yaml:"denoising_strength"`
 	OverrideSettings  map[string]any `yaml:"override_settings"`
+	EnableHR          *bool          `yaml:"enable_hr"`
+	HRScale           *float64       `yaml:"hr_scale"`
+	HRUpscaler        *string        `yaml:"hr_upscaler"`
+	HRSecondPassSteps *int           `yaml:"hr_second_pass_steps"`
+	HRDenoise         *float64       `yaml:"hr_denoise"`
 }
 
 type PromptConfig struct {
@@ -120,6 +125,41 @@ func (c *ParamConfig) OverrideSettingsValue() map[string]any {
 		return nil
 	}
 	return c.OverrideSettings
+}
+
+func (c *ParamConfig) EnableHRValue() *bool {
+	if c == nil {
+		return nil
+	}
+	return c.EnableHR
+}
+
+func (c *ParamConfig) HRScaleValue() *float64 {
+	if c == nil {
+		return nil
+	}
+	return c.HRScale
+}
+
+func (c *ParamConfig) HRUpscalerValue() *string {
+	if c == nil {
+		return nil
+	}
+	return c.HRUpscaler
+}
+
+func (c *ParamConfig) HRSecondPassStepsValue() *int {
+	if c == nil {
+		return nil
+	}
+	return c.HRSecondPassSteps
+}
+
+func (c *ParamConfig) HRDenoiseValue() *float64 {
+	if c == nil {
+		return nil
+	}
+	return c.HRDenoise
 }
 
 func LoadPromptConfig(path string) (*PromptConfig, error) {

@@ -32,6 +32,11 @@ var txt2imgFlags struct {
 	vae            string
 	textEncoder    string
 	model          string
+	hiresFix       bool
+	hrScale        float64
+	hrUpscaler     string
+	hrSteps        int
+	hrDenoise      float64
 }
 
 func init() {
@@ -52,6 +57,11 @@ func init() {
 	f.StringVar(&txt2imgFlags.vae, "vae", "", "VAE model path (forge_additional_modules)")
 	f.StringVar(&txt2imgFlags.textEncoder, "text-encoder", "", "text encoder model path (forge_additional_modules)")
 	f.StringVar(&txt2imgFlags.model, "model", "", "model checkpoint name")
+	f.BoolVar(&txt2imgFlags.hiresFix, "hires-fix", false, "enable Hires. fix")
+	f.Float64Var(&txt2imgFlags.hrScale, "hr-scale", 1.25, "Hires. fix upscale factor")
+	f.StringVar(&txt2imgFlags.hrUpscaler, "hr-upscaler", "Latent (nearest)", "Hires. fix upscaler name")
+	f.IntVar(&txt2imgFlags.hrSteps, "hr-steps", 0, "Hires. fix second pass steps (0 = same as --steps)")
+	f.Float64Var(&txt2imgFlags.hrDenoise, "hr-denoise", 0.30, "Hires. fix denoising strength")
 
 	rootCmd.AddCommand(txt2imgCmd)
 }
@@ -104,6 +114,7 @@ func runTxt2Img(cmd *cobra.Command, args []string) error {
 		}
 		overrideSettings = resolveOverrideModules(overrideSettings, modules)
 	}
+	enableHR := resolveBool(cmd, "hires-fix", txt2imgFlags.hiresFix, paramCfg.EnableHRValue())
 	req := api.Txt2ImgRequest{
 		Prompt:                            prompt,
 		NegativePrompt:                    resolveNegativePrompt(cmd, txt2imgFlags.negativePrompt, promptCfg, paramCfg),
@@ -118,6 +129,13 @@ func runTxt2Img(cmd *cobra.Command, args []string) error {
 		BatchSize:                         resolveInt(cmd, "batch-size", txt2imgFlags.batchSize, paramCfg.BatchSizeValue()),
 		OverrideSettings:                  overrideSettings,
 		OverrideSettingsRestoreAfterwards: boolPtrIfSet(overrideSettings),
+	}
+	if enableHR {
+		req.EnableHR = true
+		req.HRScale = resolveFloat64(cmd, "hr-scale", txt2imgFlags.hrScale, paramCfg.HRScaleValue())
+		req.HRUpscaler = resolveString(cmd, "hr-upscaler", txt2imgFlags.hrUpscaler, paramCfg.HRUpscalerValue())
+		req.HRSecondPassSteps = resolveInt(cmd, "hr-steps", txt2imgFlags.hrSteps, paramCfg.HRSecondPassStepsValue())
+		req.DenoisingStrength = resolveFloat64(cmd, "hr-denoise", txt2imgFlags.hrDenoise, paramCfg.HRDenoiseValue())
 	}
 
 	if cmd.Flags().Changed("sampler") {
