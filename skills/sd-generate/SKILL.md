@@ -35,14 +35,15 @@ $ARGUMENTS
 
 判定したインテントに対応するリファレンスファイルを読み、指示に従ってパラメータを収集してコマンドを実行する。
 
+> **必須**: インテント別リファレンスを読む前に **必ず** `docs/config.md` を読むこと。設定ファイル（params.yaml / prompt.yaml）の形式や model/VAE/text-encoder の指定が誤っていると生成が失敗する。
+
 | インテント | リファレンスファイル |
 |---|---|
-| txt2img | `skills/sd-generate/docs/txt2img.md` |
-| img2img | `skills/sd-generate/docs/img2img.md` |
-| hires | `skills/sd-generate/docs/hires.md` |
-| models / modules / upscalers / samplers / schedulers | `skills/sd-generate/docs/management.md` |
-
-YAML設定ファイルの形式・出力命名・model/VAE/text-encoder の指定ルールは `skills/sd-generate/docs/config.md` を参照する。
+| **共通（全インテント）** | `docs/config.md` |
+| txt2img | `docs/txt2img.md` |
+| img2img | `docs/img2img.md` |
+| hires | `docs/hires.md` |
+| models / modules / upscalers / samplers / schedulers | `docs/management.md` |
 
 ## フェーズ3: 結果報告
 

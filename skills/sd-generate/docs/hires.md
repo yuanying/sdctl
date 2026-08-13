@@ -1,5 +1,7 @@
 # hires リファレンス
 
+> **共通設定**（YAML形式・出力命名・model/VAE/text-encoder）→ [`config.md`](config.md)
+
 既存画像にlatentアップスケールを適用する。入力画像のサイズが `--scale` 倍に自動計算される（`--width` / `--height` は使わない）。
 
 ## パラメータ収集順序

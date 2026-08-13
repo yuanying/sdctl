@@ -1,5 +1,7 @@
 # img2img リファレンス
 
+> **共通設定**（YAML形式・出力命名・model/VAE/text-encoder）→ [`config.md`](config.md)
+
 既存画像をプロンプトで変換する。
 
 ## パラメータ収集順序

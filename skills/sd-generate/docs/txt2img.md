@@ -1,5 +1,7 @@
 # txt2img リファレンス
 
+> **共通設定**（YAML形式・出力命名・model/VAE/text-encoder）→ [`config.md`](config.md)
+
 テキストプロンプトから画像を生成する。
 
 ## パラメータ収集順序

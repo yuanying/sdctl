@@ -23,7 +23,7 @@ VAE と text encoder の一覧を表示する。
 sdctl modules
 ```
 
-出力にある module name または full path は、`--vae` / `--text-encoder` および `params.yaml` の `override_settings.forge_additional_modules` に指定できる。
+出力にある module name または full path は、`--vae` / `--text-encoder` および `params.yaml` の `override_settings.forge_additional_modules` に指定できる（詳細は `config.md` 参照）。
 
 ## upscalers
 
