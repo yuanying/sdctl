@@ -2,7 +2,7 @@
 name: sd-generate
 description: |
   sdctl CLI を使って Stable Diffusion WebUI (AUTOMATIC1111) で画像生成・変換・生成環境確認を行うスキル。
-  トリガー: "sd-generate", "/sd-generate", "画像生成", "stable diffusion", "StableDiffusion", "SD画像", "txt2img", "img2img", "hires", "アップスケール", "モデル一覧", "model", "modules", "vae", "text encoder", "sampler", "scheduler", "upscaler", "params.yaml", "prompt.yaml"
+  トリガー: "sd-generate", "/sd-generate", "画像生成", "stable diffusion", "StableDiffusion", "SD画像", "txt2img", "img2img", "hires", "アップスケール", "モデル一覧", "model", "modules", "anima", "sdxl", "illustrious", "pony", "vae", "text encoder", "sampler", "scheduler", "upscaler", "params.yaml", "prompt.yaml"
   使用場面: (1) テキストプロンプトから画像を生成したいとき、(2) 既存画像をimg2imgで変換したいとき、(3) 既存画像をlatentアップスケールしたいとき、(4) モデル・サンプラー・スケジューラー・VAE・text encoder・アップスケーラーを確認したいとき、(5) seed・CFG・batch・model・VAE・text encoder・YAML設定ファイルなどsdctl生成パラメータを指定して実行したいとき
 ---
 
@@ -31,18 +31,29 @@ $ARGUMENTS
 | **samplers** | サンプラー一覧の確認 |
 | **schedulers** | スケジューラー一覧の確認 |
 
+生成系（txt2img / img2img / hires）の場合は、あわせて**モデル系統**を判定する。系統によって VAE / text encoder の要否と推奨パラメータが変わる。
+
+| モデル名のプレフィックス | 系統 | VAE / text encoder |
+|---|---|---|
+| `anima_` | Anima | 必須 |
+| `IL_` / `Pony_` | SDXL | 不要 |
+| `SD1_` | SD 1.5 | 不要 |
+
+指定がなく文脈からも判断できない場合はユーザーに確認する。
+
 ## フェーズ2: パラメータ収集 & コマンド実行
 
 判定したインテントに対応するリファレンスファイルを読み、指示に従ってパラメータを収集してコマンドを実行する。
 
+> **必須**: インテント別リファレンスを読む前に **必ず** `docs/config.md` を読むこと。設定ファイル（params.yaml / prompt.yaml）の形式や model/VAE/text-encoder の指定が誤っていると生成が失敗する。とくに Anima 系と SDXL 系を切り替えるときは、前の系統のモジュールが残って**エラーなしで真っ黒な画像が出力される**ため、`config.md` のクリア手順に従うこと。
+
 | インテント | リファレンスファイル |
 |---|---|
-| txt2img | `skills/sd-generate/docs/txt2img.md` |
-| img2img | `skills/sd-generate/docs/img2img.md` |
-| hires | `skills/sd-generate/docs/hires.md` |
-| models / modules / upscalers / samplers / schedulers | `skills/sd-generate/docs/management.md` |
-
-YAML設定ファイルの形式・出力命名・model/VAE/text-encoder の指定ルールは `skills/sd-generate/docs/config.md` を参照する。
+| **共通（全インテント）** | `docs/config.md` |
+| txt2img | `docs/txt2img.md` |
+| img2img | `docs/img2img.md` |
+| hires | `docs/hires.md` |
+| models / modules / upscalers / samplers / schedulers | `docs/management.md` |
 
 ## フェーズ3: 結果報告
 
