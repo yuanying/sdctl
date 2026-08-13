@@ -69,7 +69,7 @@
           "name": "uses_hires",
           "description": "hires コマンドを使用する",
           "type": "contains_any",
-          "patterns": ["sdctl hires", "hires base.png"]
+          "patterns": ["sdctl hires", "hires \"anime girl\" base.png"]
         },
         {
           "name": "mentions_scale",
@@ -202,6 +202,58 @@
           "description": "txt2img コマンドを使用する",
           "type": "contains_any",
           "patterns": ["sdctl txt2img", "txt2img"]
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "prompt": "anima_anima-base-v1.0 で猫の画像を生成してください。",
+      "expected_output": "Anima 系モデルと判定し、--vae qwen_image_vae.safetensors と --text-encoder qwen_3_06b_base.safetensors を付けた sdctl txt2img を実行する。指定しないと API が 500 (You do not have VAE state dict!) を返すため必須",
+      "files": [],
+      "assertions": [
+        {
+          "name": "uses_vae",
+          "description": "Anima 用の VAE を指定する",
+          "type": "contains_any",
+          "patterns": ["--vae", "qwen_image_vae", "forge_additional_modules"]
+        },
+        {
+          "name": "uses_text_encoder",
+          "description": "Anima 用の text encoder を指定する",
+          "type": "contains_any",
+          "patterns": ["--text-encoder", "qwen_3_06b_base"]
+        },
+        {
+          "name": "uses_anima_model",
+          "description": "Anima モデルを指定する",
+          "type": "contains_any",
+          "patterns": ["--model", "anima_anima-base-v1.0", "sd_model_checkpoint"]
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "prompt": "さっきは anima で生成しましたが、今度は IL_illustrij_v4 で同じプロンプトを生成してください。",
+      "expected_output": "SDXL 系への切り替えと判定し、VAE / text encoder は付けず、残留している Anima のモジュールを params.yaml の forge_additional_modules: [] でクリアしてから sdctl txt2img を実行する。クリアしないとエラーなしで真っ黒な画像が出力される",
+      "files": [],
+      "assertions": [
+        {
+          "name": "clears_modules",
+          "description": "残留モジュールを空配列でクリアする",
+          "type": "contains_any",
+          "patterns": ["forge_additional_modules: []", "forge_additional_modules:\n    []", "モジュール", "クリア"]
+        },
+        {
+          "name": "uses_sdxl_model",
+          "description": "SDXL 系モデルを指定する",
+          "type": "contains_any",
+          "patterns": ["IL_illustrij_v4", "--model", "sd_model_checkpoint"]
+        },
+        {
+          "name": "mentions_no_vae_for_sdxl",
+          "description": "SDXL 系では VAE / text encoder が不要であることに触れる",
+          "type": "contains_any",
+          "patterns": ["不要", "付けない", "指定しない", "SDXL"]
         }
       ]
     }

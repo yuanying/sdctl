@@ -42,14 +42,24 @@ sdctl txt2img "a cat" --batch-size 2 --batch-count 3 -o result.png
 # → result.0001.png, result.0002.png, ..., result.0006.png
 
 # Specify model checkpoint for this generation
-sdctl txt2img "anime girl" --model animagineXLV31_v31
+# SDXL-family checkpoints (IL_ / Pony_) have a built-in VAE — no extra modules needed
+sdctl txt2img "anime girl" --model IL_illustrij_v4
 
-# VAE / text encoder (required for some models e.g. anima)
+# VAE / text encoder (required for anima models, which fail with
+# "You do not have VAE state dict!" without them)
 # model name or full path are both accepted
 sdctl txt2img "anime girl" \
-  --model animagineXLV31_v31 \
+  --model anima_anima-base-v1.0 \
   --vae qwen_image_vae.safetensors \
   --text-encoder qwen_3_06b_base.safetensors
+
+# Modules are NOT restored after generation (see ADR 0016), so switching from an
+# anima model back to SDXL leaves the anima modules loaded and silently produces
+# a black image. Clear them with an empty list in params.yaml:
+#   override_settings:
+#     sd_model_checkpoint: "IL_illustrij_v4"
+#     forge_additional_modules: []
+sdctl txt2img "anime girl" --params clear_modules.yaml
 
 # Using config files
 sdctl txt2img --params params.yaml --prompt prompt.yaml
@@ -78,16 +88,17 @@ sdctl img2img "override prompt" --params params.yaml input.png
 
 ```bash
 # Apply latent upscale + resampling to an existing image
+# Prompt comes first, input image second
 # Dimensions are scaled automatically: input × --scale → new width/height
-sdctl hires base.png "anime girl" --scale 1.25 --steps 35 --denoise 0.32 -o hires1.png
+sdctl hires "anime girl" base.png --scale 1.25 --steps 35 --denoise 0.32 -o hires1.png
 
-# Multi-stage high-quality upscale (Anima Latent Upscale workflow)
+# Multi-stage high-quality upscale (works for both anima and SDXL models)
 sdctl txt2img "anime girl" --steps 45 -o base.png
-sdctl hires base.png "anime girl" --scale 1.25 --steps 35 --denoise 0.32 -o hires1.png
-sdctl hires hires1.png "anime girl" --scale 1.15 --steps 30 --denoise 0.34 -o final.png
+sdctl hires "anime girl" base.png --scale 1.25 --steps 35 --denoise 0.32 -o hires1.png
+sdctl hires "anime girl" hires1.png --scale 1.15 --steps 30 --denoise 0.34 -o final.png
 
 # With model / VAE / text-encoder
-sdctl hires base.png "anime girl" \
+sdctl hires "anime girl" base.png \
   --model anima_anima-base-v1.0 \
   --vae qwen_image_vae.safetensors \
   --text-encoder qwen_3_06b_base.safetensors \
@@ -109,19 +120,19 @@ width: 768
 height: 768
 cfg_scale: 8.0
 sampler: "DPM++ 2M"
-scheduler: "Karras"
+scheduler: "karras"          # lowercase id from `sdctl schedulers list`
 seed: -1
 batch_count: 1
 batch_size: 1
 denoising_strength: 0.75  # img2img / hires only
 enable_hr: false           # txt2img: enable Hires. fix
 hr_scale: 1.25             # Hires. fix upscale factor
-hr_upscaler: "Latent (nearest)"  # see `sdctl upscalers`
+hr_upscaler: "Latent (nearest)"  # latent modes are not listed by `sdctl upscalers`
 hr_second_pass_steps: 25   # 0 = same as steps
 hr_denoise: 0.30           # Hires. fix denoising strength
 override_settings:
-  sd_model_checkpoint: "SD1_QuinceMixV2"   # model checkpoint (no validation)
-  forge_additional_modules:
+  sd_model_checkpoint: "anima_anima-base-v1.0"  # model checkpoint (no validation)
+  forge_additional_modules:                 # anima models only; use [] for SDXL
     - "qwen_image_vae.safetensors"          # model name or full path
     - "qwen_3_06b_base.safetensors"
 ```
