@@ -50,8 +50,8 @@ func init() {
 	f.Float64Var(&img2imgFlags.denoisingStrength, "denoising", 0.75, "denoising strength (0.0-1.0)")
 	f.IntVar(&img2imgFlags.batchCount, "batch-count", 1, "number of times to run generation")
 	f.IntVar(&img2imgFlags.batchSize, "batch-size", 1, "number of images per batch")
-	f.StringVarP(&img2imgFlags.output, "output", "o", "", "output file or directory")
-	f.StringVar(&img2imgFlags.paramsFile, "params", "", "generation parameter config file (YAML)")
+	f.StringVarP(&img2imgFlags.output, "output", "o", "", "output file or directory (default: $SDCTL_OUTPUT_DIR or the current directory)")
+	f.StringVar(&img2imgFlags.paramsFile, "params", "", "generation parameter config file (YAML) (default: $SDCTL_PARAMS; '' disables it)")
 	f.StringVar(&img2imgFlags.promptFile, "prompt", "", "prompt file (YAML)")
 	f.StringVar(&img2imgFlags.vae, "vae", "", "VAE model path (forge_additional_modules)")
 	f.StringVar(&img2imgFlags.textEncoder, "text-encoder", "", "text encoder model path (forge_additional_modules)")
@@ -62,12 +62,17 @@ func init() {
 
 func runImg2Img(cmd *cobra.Command, args []string) error {
 	var paramCfg *genconfig.ParamConfig
-	if img2imgFlags.paramsFile != "" {
+	if paramsFile := resolveDefaultString(cmd, "params", img2imgFlags.paramsFile, cfg.Params); paramsFile != "" {
 		var err error
-		paramCfg, err = genconfig.LoadParamConfig(img2imgFlags.paramsFile)
+		paramCfg, err = genconfig.LoadParamConfig(paramsFile)
 		if err != nil {
 			return fmt.Errorf("error loading params file: %w", err)
 		}
+	}
+
+	output, err := resolveOutput(cmd, img2imgFlags.output, cfg.OutputDir)
+	if err != nil {
+		return fmt.Errorf("error: %w", err)
 	}
 
 	var promptCfg *genconfig.PromptConfig
@@ -159,16 +164,15 @@ func runImg2Img(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	stop := make(chan struct{})
-	go watchProgress(stop)
+	stop := startProgress(os.Stderr, progressEnabled())
 
 	resp, err := client.Img2Img(req)
-	close(stop)
+	stop()
 	if err != nil {
 		return fmt.Errorf("error: %w", err)
 	}
 
-	paths, err := saveImages(resp.Images, img2imgFlags.output)
+	paths, err := saveImages(resp.Images, output)
 	if err != nil {
 		return fmt.Errorf("error: %w", err)
 	}

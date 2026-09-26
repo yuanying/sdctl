@@ -15,6 +15,7 @@ $ARGUMENTS
 - **sdctl**: `go install github.com/yuanying/sdctl@latest`（Go 1.21+ 必要）
 - **WebUI**: AUTOMATIC1111 が `--api` フラグ付きで起動していること
 - **接続先**: デフォルト `http://localhost:7860`。変更する場合は環境変数 `SDCTL_URL` または `--config` フラグを使う。
+- **既定値の環境変数**: `SDCTL_PARAMS`（`--params` を省いたときの params ファイル）と `SDCTL_OUTPUT_DIR`（`-o` を省いたときの出力ディレクトリ）が設定されていることがある。フラグを付ければフラグが優先される。詳細は `docs/config.md` を参照。
 
 ## フェーズ1: インテント判定
 

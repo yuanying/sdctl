@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
 	"github.com/yuanying/sdctl/internal/api"
@@ -51,8 +52,8 @@ func init() {
 	f.Int64Var(&txt2imgFlags.seed, "seed", -1, "seed (-1 for random)")
 	f.IntVar(&txt2imgFlags.batchCount, "batch-count", 1, "number of times to run generation")
 	f.IntVar(&txt2imgFlags.batchSize, "batch-size", 1, "number of images per batch")
-	f.StringVarP(&txt2imgFlags.output, "output", "o", "", "output file or directory")
-	f.StringVar(&txt2imgFlags.paramsFile, "params", "", "generation parameter config file (YAML)")
+	f.StringVarP(&txt2imgFlags.output, "output", "o", "", "output file or directory (default: $SDCTL_OUTPUT_DIR or the current directory)")
+	f.StringVar(&txt2imgFlags.paramsFile, "params", "", "generation parameter config file (YAML) (default: $SDCTL_PARAMS; '' disables it)")
 	f.StringVar(&txt2imgFlags.promptFile, "prompt", "", "prompt file (YAML)")
 	f.StringVar(&txt2imgFlags.vae, "vae", "", "VAE model path (forge_additional_modules)")
 	f.StringVar(&txt2imgFlags.textEncoder, "text-encoder", "", "text encoder model path (forge_additional_modules)")
@@ -68,12 +69,17 @@ func init() {
 
 func runTxt2Img(cmd *cobra.Command, args []string) error {
 	var paramCfg *genconfig.ParamConfig
-	if txt2imgFlags.paramsFile != "" {
+	if paramsFile := resolveDefaultString(cmd, "params", txt2imgFlags.paramsFile, cfg.Params); paramsFile != "" {
 		var err error
-		paramCfg, err = genconfig.LoadParamConfig(txt2imgFlags.paramsFile)
+		paramCfg, err = genconfig.LoadParamConfig(paramsFile)
 		if err != nil {
 			return fmt.Errorf("error loading params file: %w", err)
 		}
+	}
+
+	output, err := resolveOutput(cmd, txt2imgFlags.output, cfg.OutputDir)
+	if err != nil {
+		return fmt.Errorf("error: %w", err)
 	}
 
 	var promptCfg *genconfig.PromptConfig
@@ -149,16 +155,15 @@ func runTxt2Img(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	stop := make(chan struct{})
-	go watchProgress(stop)
+	stop := startProgress(os.Stderr, progressEnabled())
 
 	resp, err := client.Txt2Img(req)
-	close(stop)
+	stop()
 	if err != nil {
 		return fmt.Errorf("error: %w", err)
 	}
 
-	paths, err := saveImages(resp.Images, txt2imgFlags.output)
+	paths, err := saveImages(resp.Images, output)
 	if err != nil {
 		return fmt.Errorf("error: %w", err)
 	}

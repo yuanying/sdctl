@@ -136,9 +136,23 @@ CLI フラグは YAML より優先される。プロンプト引数を指定し�
 
 `params.yaml` には `model:` / `vae:` / `text_encoder:` キーは書かない。必ず `override_settings` 配下に書く。
 
+## 既定値（環境変数）
+
+`sdctl txt2img` / `img2img` / `hires` は、フラグを省いたときに次の既定値を使う。優先順位は「フラグ > 環境変数 > config.yaml」。
+
+| 環境変数 | config.yaml のキー | 使われる場面 |
+|---|---|---|
+| `SDCTL_PARAMS` | `params` | `--params` を省いたときの params ファイル |
+| `SDCTL_OUTPUT_DIR` | `output_dir` | `-o` を省いたときの出力ディレクトリ（無ければ作られる） |
+
+- 実行前に `echo $SDCTL_PARAMS $SDCTL_OUTPUT_DIR` で既定値を確認できる。
+- 既定の params を使いたくないときは `--params ''` を付ける。別の params を使うときは `--params <file>` を付ける（既定の params とは合成されず、置き換わる）。
+- `-o` を省くと `$SDCTL_OUTPUT_DIR/output-<YYYYMMDD-HHMMSS>-<n>.png` に保存される。同じ秒に何度実行しても上書きされない。
+- 保存したパスは stdout に 1 行ずつ出る。進み具合のバーは stderr が端末のときだけ stderr に出るので、`path=$(sdctl txt2img "...")` のようにパスだけを受け取れる。
+
 ## 出力ファイル命名
 
-- `-o` にはディレクトリではなくファイルパスを渡す。ユーザーがディレクトリを指定した場合はそのディレクトリ配下に適切なファイル名を付けて `-o <dir>/<filename>.png` にする。
+- 名前を付けて保存するときは `-o` にディレクトリではなくファイルパスを渡す（`SDCTL_OUTPUT_DIR` があり、名前を気にしない場合は `-o` を省いてよい）。ユーザーがディレクトリを指定した場合はそのディレクトリ配下に適切なファイル名を付けて `-o <dir>/<filename>.png` にする。
 - シナリオワークスペースで `prompt_XX_Y.yaml` を使う場合は `outputs/image_XX_Y.png` を標準名にする。例: `kutara_aki/01_example/prompt_02_1.yaml` → `-o kutara_aki/01_example/outputs/image_02_1.png`
 - プロンプトファイル名がない場合は用途が分かる短い snake_case 名を付ける。例: `portrait_desk.png`, `window_reading.png`
 - バッチ生成時もベース名を付ける（例: `-o result.png` → `result.0001.png`, `result.0002.png`, ...）
