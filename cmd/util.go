@@ -2,7 +2,10 @@ package cmd
 
 import (
 	"encoding/base64"
+	"errors"
 	"fmt"
+	"io"
+	"io/fs"
 	"maps"
 	"os"
 	"path/filepath"
@@ -15,7 +18,11 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/yuanying/sdctl/internal/api"
 	"github.com/yuanying/sdctl/internal/genconfig"
+	"golang.org/x/term"
 )
+
+// now is replaced in tests to produce deterministic file names.
+var now = time.Now
 
 func resolvePrompt(args []string, promptCfg *genconfig.PromptConfig) (string, error) {
 	if len(args) > 0 {
@@ -149,6 +156,27 @@ func resolveFlag(cmd *cobra.Command, flagName, flagVal string) string {
 	return ""
 }
 
+// resolveDefaultString returns flagVal when the flag was explicitly set (even to an empty string),
+// otherwise falls back to def.
+func resolveDefaultString(cmd *cobra.Command, flagName, flagVal, def string) string {
+	if cmd.Flags().Changed(flagName) {
+		return flagVal
+	}
+	return def
+}
+
+// resolveOutput returns the -o value when it was explicitly set, otherwise defaultDir.
+// defaultDir is created when it does not exist yet.
+func resolveOutput(cmd *cobra.Command, flagVal, defaultDir string) (string, error) {
+	output := resolveDefaultString(cmd, "output", flagVal, defaultDir)
+	if !cmd.Flags().Changed("output") && output != "" {
+		if err := os.MkdirAll(output, 0755); err != nil {
+			return "", fmt.Errorf("failed to create output directory: %w", err)
+		}
+	}
+	return output, nil
+}
+
 // resolveBool returns flagVal when the flag was explicitly set, otherwise falls back to cfgVal.
 func resolveBool(cmd *cobra.Command, flagName string, flagVal bool, cfgVal *bool) bool {
 	if cmd.Flags().Changed(flagName) || cfgVal == nil {
@@ -272,29 +300,73 @@ func findMaxIndexedSuffix(dir, base, ext string) int {
 	return max
 }
 
+// saveImagesToDir saves images as output-<time>-<n>.png in dir.
+// n skips names that already exist, so calls within the same second never overwrite each other.
 func saveImagesToDir(images []string, dir string) ([]string, error) {
-	base := time.Now().Format("20060102-150405")
+	base := now().Format("20060102-150405")
 	paths := make([]string, 0, len(images))
+	n := 1
 	for i, imgData := range images {
-		filename := fmt.Sprintf("output-%s-%d.png", base, i+1)
-		dest := filename
-		if dir != "" {
-			dest = filepath.Join(dir, filename)
-		}
 		data, err := base64.StdEncoding.DecodeString(imgData)
 		if err != nil {
 			return nil, fmt.Errorf("failed to decode image %d: %w", i+1, err)
 		}
-		if err := os.WriteFile(dest, data, 0644); err != nil {
-			return nil, fmt.Errorf("failed to write image %d: %w", i+1, err)
+		for ; ; n++ {
+			dest := filepath.Join(dir, fmt.Sprintf("output-%s-%d.png", base, n))
+			err := writeNewFile(dest, data)
+			if errors.Is(err, fs.ErrExist) {
+				continue
+			}
+			if err != nil {
+				return nil, fmt.Errorf("failed to write image %d: %w", i+1, err)
+			}
+			paths = append(paths, dest)
+			n++
+			break
 		}
-		paths = append(paths, dest)
 	}
 	return paths, nil
 }
 
-func watchProgress(stop <-chan struct{}) {
+// writeNewFile writes data to path, failing with fs.ErrExist if path already exists.
+func writeNewFile(path string, data []byte) error {
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0644)
+	if err != nil {
+		return err
+	}
+	if _, err := f.Write(data); err != nil {
+		f.Close()
+		return err
+	}
+	return f.Close()
+}
+
+// progressEnabled reports whether the progress bar should be shown (stderr is a terminal).
+func progressEnabled() bool {
+	return term.IsTerminal(int(os.Stderr.Fd()))
+}
+
+// startProgress shows a progress bar on w until the returned stop function is called.
+// When enabled is false nothing is written.
+func startProgress(w io.Writer, enabled bool) (stop func()) {
+	if !enabled {
+		return func() {}
+	}
+	stopCh := make(chan struct{})
+	done := make(chan struct{})
+	go func() {
+		watchProgress(stopCh, w)
+		close(done)
+	}()
+	return func() {
+		close(stopCh)
+		<-done
+	}
+}
+
+func watchProgress(stop <-chan struct{}, w io.Writer) {
 	bar := progressbar.NewOptions(100,
+		progressbar.OptionSetWriter(w),
 		progressbar.OptionSetDescription("Generating"),
 		progressbar.OptionSetWidth(40),
 		progressbar.OptionShowBytes(false),

@@ -53,8 +53,8 @@ func init() {
 	f.Float64Var(&hiresFlags.scale, "scale", 1.25, "upscale factor applied to input image dimensions")
 	f.Float64Var(&hiresFlags.denoise, "denoise", 0.30, "denoising strength (0.0-1.0)")
 	f.StringVar(&hiresFlags.upscaler, "upscaler", "Latent (nearest)", "upscaler name (see `sdctl upscalers`)")
-	f.StringVarP(&hiresFlags.output, "output", "o", "", "output file or directory")
-	f.StringVar(&hiresFlags.paramsFile, "params", "", "generation parameter config file (YAML)")
+	f.StringVarP(&hiresFlags.output, "output", "o", "", "output file or directory (default: $SDCTL_OUTPUT_DIR or the current directory)")
+	f.StringVar(&hiresFlags.paramsFile, "params", "", "generation parameter config file (YAML) (default: $SDCTL_PARAMS; '' disables it)")
 	f.StringVar(&hiresFlags.promptFile, "prompt", "", "prompt file (YAML)")
 	f.StringVar(&hiresFlags.vae, "vae", "", "VAE model path (forge_additional_modules)")
 	f.StringVar(&hiresFlags.textEncoder, "text-encoder", "", "text encoder model path (forge_additional_modules)")
@@ -65,12 +65,17 @@ func init() {
 
 func runHires(cmd *cobra.Command, args []string) error {
 	var paramCfg *genconfig.ParamConfig
-	if hiresFlags.paramsFile != "" {
+	if paramsFile := resolveDefaultString(cmd, "params", hiresFlags.paramsFile, cfg.Params); paramsFile != "" {
 		var err error
-		paramCfg, err = genconfig.LoadParamConfig(hiresFlags.paramsFile)
+		paramCfg, err = genconfig.LoadParamConfig(paramsFile)
 		if err != nil {
 			return fmt.Errorf("error loading params file: %w", err)
 		}
+	}
+
+	output, err := resolveOutput(cmd, hiresFlags.output, cfg.OutputDir)
+	if err != nil {
+		return fmt.Errorf("error: %w", err)
 	}
 
 	var promptCfg *genconfig.PromptConfig
@@ -170,16 +175,15 @@ func runHires(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	stop := make(chan struct{})
-	go watchProgress(stop)
+	stop := startProgress(os.Stderr, progressEnabled())
 
 	resp, err := client.Img2Img(req)
-	close(stop)
+	stop()
 	if err != nil {
 		return fmt.Errorf("error: %w", err)
 	}
 
-	paths, err := saveImages(resp.Images, hiresFlags.output)
+	paths, err := saveImages(resp.Images, output)
 	if err != nil {
 		return fmt.Errorf("error: %w", err)
 	}
