@@ -21,12 +21,37 @@ By default, sdctl connects to `http://localhost:7860`.
 
 ```yaml
 url: http://localhost:7860
+params: /path/to/default-params.yaml  # default --params for txt2img / img2img / hires
+output_dir: /path/to/images           # default -o for txt2img / img2img / hires
 ```
 
-**Environment variable** (takes priority over config file):
+**Environment variables** (take priority over the config file):
+
+| Variable | Config key | Meaning |
+|---|---|---|
+| `SDCTL_URL` | `url` | WebUI URL |
+| `SDCTL_PARAMS` | `params` | Params file used when `--params` is not given |
+| `SDCTL_OUTPUT_DIR` | `output_dir` | Output directory used when `-o` is not given (created if missing) |
 
 ```bash
 export SDCTL_URL=http://myserver:7860
+export SDCTL_PARAMS=/path/to/default-params.yaml
+export SDCTL_OUTPUT_DIR=/path/to/images
+sdctl txt2img "a cat"   # → /path/to/images/output-<YYYYMMDD-HHMMSS>-<n>.png
+```
+
+Precedence is: command-line flag > environment variable > config file.
+
+- `--params ''` runs without any params file, even if a default is set.
+- Setting `SDCTL_PARAMS=` or `SDCTL_OUTPUT_DIR=` (empty) ignores the config file value.
+- Files in the output directory are named `output-<YYYYMMDD-HHMMSS>-<n>.png`. `<n>` skips names that already exist, so runs in the same second never overwrite each other.
+
+### Output
+
+Saved image paths are printed to stdout, one per line. The progress bar is written to stderr, and only when stderr is a terminal, so the output can be piped safely:
+
+```bash
+path=$(sdctl txt2img "a cat")
 ```
 
 ## Usage
@@ -180,7 +205,7 @@ Latent 系アップスケーラー（`Latent (nearest)` など）は `/sdapi/v1/
 ### Common flags (txt2img / img2img / hires)
 
 ```
-    --params string        generation parameter config file (YAML)
+    --params string        generation parameter config file (YAML) (default: $SDCTL_PARAMS)
     --prompt string        prompt file (YAML)
 -n, --negative string      negative prompt
     --steps int            sampling steps (default 20)
@@ -191,7 +216,7 @@ Latent 系アップスケーラー（`Latent (nearest)` など）は `/sdapi/v1/
     --seed int             seed, -1 for random (default -1)
     --batch-count int      number of times to run generation (default 1)
     --batch-size int       number of images per batch (default 1)
--o, --output string        output file or directory (default: current directory)
+-o, --output string        output file or directory (default: $SDCTL_OUTPUT_DIR, else current directory)
     --model string         model checkpoint name (must match `sdctl models list` exactly)
     --vae string           VAE model path (sets forge_additional_modules[0])
     --text-encoder string  text encoder model path (sets forge_additional_modules[1])
