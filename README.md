@@ -23,6 +23,8 @@ By default, sdctl connects to `http://localhost:7860`.
 url: http://localhost:7860
 params: /path/to/default-params.yaml  # default --params for txt2img / img2img / hires
 output_dir: /path/to/images           # default -o for txt2img / img2img / hires
+format: jpeg                          # default image format: png (default) or jpeg
+jpeg_quality: 90                      # default JPEG quality, 1-100 (default 90)
 ```
 
 **Environment variables** (take priority over the config file):
@@ -32,6 +34,8 @@ output_dir: /path/to/images           # default -o for txt2img / img2img / hires
 | `SDCTL_URL` | `url` | WebUI URL |
 | `SDCTL_PARAMS` | `params` | Params file used when `--params` is not given |
 | `SDCTL_OUTPUT_DIR` | `output_dir` | Output directory used when `-o` is not given (created if missing) |
+| `SDCTL_FORMAT` | `format` | Image format (`png` or `jpeg`) used when neither `--format` nor the `-o` extension decides it |
+| `SDCTL_JPEG_QUALITY` | `jpeg_quality` | JPEG quality (1-100) used when `--quality` is not given |
 
 ```bash
 export SDCTL_URL=http://myserver:7860
@@ -43,8 +47,8 @@ sdctl txt2img "a cat"   # → /path/to/images/output-<YYYYMMDD-HHMMSS>-<n>.png
 Precedence is: command-line flag > environment variable > config file.
 
 - `--params ''` runs without any params file, even if a default is set.
-- Setting `SDCTL_PARAMS=` or `SDCTL_OUTPUT_DIR=` (empty) ignores the config file value.
-- Files in the output directory are named `output-<YYYYMMDD-HHMMSS>-<n>.png`. `<n>` skips names that already exist, so runs in the same second never overwrite each other.
+- Setting `SDCTL_PARAMS=`, `SDCTL_OUTPUT_DIR=`, `SDCTL_FORMAT=` or `SDCTL_JPEG_QUALITY=` (empty) ignores the config file value.
+- Files in the output directory are named `output-<YYYYMMDD-HHMMSS>-<n>.png` (`.jpg` for JPEG). `<n>` skips names that already exist, so runs in the same second never overwrite each other.
 
 ### Output
 
@@ -53,6 +57,25 @@ Saved image paths are printed to stdout, one per line. The progress bar is writt
 ```bash
 path=$(sdctl txt2img "a cat")
 ```
+
+### Image format (PNG / JPEG)
+
+Images are saved as PNG by default. The format is decided in this order:
+
+1. `--format png|jpeg` (`jpg` is accepted too)
+2. The extension of the `-o` file name: `.png` → PNG, `.jpg` / `.jpeg` → JPEG (case-insensitive). Not used when `-o` is a directory.
+3. `SDCTL_FORMAT`, then `format` in the config file
+4. PNG
+
+```bash
+sdctl txt2img "a cat" -o cat.jpg                 # JPEG, from the extension
+sdctl txt2img "a cat" --format jpeg -o ./output/ # → ./output/output-<YYYYMMDD-HHMMSS>-<n>.jpg
+sdctl txt2img "a cat" --format jpeg --quality 80
+```
+
+- `--format` that contradicts the `-o` extension (e.g. `--format jpeg -o cat.png`) is an error, reported before anything is generated.
+- JPEG quality is `--quality` > `SDCTL_JPEG_QUALITY` > `jpeg_quality` > 90.
+- PNG files are written exactly as returned by the WebUI. JPEG files are re-encoded by sdctl from that PNG, so **they do not keep the generation parameters (infotext) embedded in the PNG**. Keep PNG when you need PNG Info later, or for intermediate `hires` stages.
 
 ## Usage
 
@@ -217,6 +240,8 @@ Latent 系アップスケーラー（`Latent (nearest)` など）は `/sdapi/v1/
     --batch-count int      number of times to run generation (default 1)
     --batch-size int       number of images per batch (default 1)
 -o, --output string        output file or directory (default: $SDCTL_OUTPUT_DIR, else current directory)
+    --format string        image format: png or jpeg/jpg (default: -o extension, else $SDCTL_FORMAT, else png)
+    --quality int          JPEG quality 1-100 (default: $SDCTL_JPEG_QUALITY, else 90)
     --model string         model checkpoint name (must match `sdctl models list` exactly)
     --vae string           VAE model path (sets forge_additional_modules[0])
     --text-encoder string  text encoder model path (sets forge_additional_modules[1])
@@ -244,4 +269,4 @@ Latent 系アップスケーラー（`Latent (nearest)` など）は `/sdapi/v1/
 > - **Single image:** saved as `result.png`. If the file already exists, saved as `result.0001.png` (4-digit zero-padded, expands as needed).
 > - **Batch (`--batch-count > 1` or `--batch-size > 1`):** always saved with an index suffix starting from the next available number — e.g. `result.0001.png`, `result.0002.png`, …
 >
-> If `--output` is a **directory** or omitted, files are saved as `output-TIMESTAMP-N.png`.
+> If `--output` is a **directory** or omitted, files are saved as `output-TIMESTAMP-N.png` (`.jpg` for JPEG).

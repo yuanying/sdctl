@@ -144,15 +144,30 @@ CLI フラグは YAML より優先される。プロンプト引数を指定し�
 |---|---|---|
 | `SDCTL_PARAMS` | `params` | `--params` を省いたときの params ファイル |
 | `SDCTL_OUTPUT_DIR` | `output_dir` | `-o` を省いたときの出力ディレクトリ（無ければ作られる） |
+| `SDCTL_FORMAT` | `format` | 画像の形式（`png` / `jpeg`）。`--format` も `-o` の拡張子も無いときに使う。どれも無ければ PNG |
+| `SDCTL_JPEG_QUALITY` | `jpeg_quality` | JPEG の品質（1〜100）。`--quality` を省いたときに使う。どれも無ければ 90 |
 
-- 実行前に `echo $SDCTL_PARAMS $SDCTL_OUTPUT_DIR` で既定値を確認できる。
+- 実行前に `echo $SDCTL_PARAMS $SDCTL_OUTPUT_DIR $SDCTL_FORMAT` で既定値を確認できる。
 - 既定の params を使いたくないときは `--params ''` を付ける。別の params を使うときは `--params <file>` を付ける（既定の params とは合成されず、置き換わる）。
-- `-o` を省くと `$SDCTL_OUTPUT_DIR/output-<YYYYMMDD-HHMMSS>-<n>.png` に保存される。同じ秒に何度実行しても上書きされない。
+- `-o` を省くと `$SDCTL_OUTPUT_DIR/output-<YYYYMMDD-HHMMSS>-<n>.png`（JPEG のときは `.jpg`）に保存される。同じ秒に何度実行しても上書きされない。
 - 保存したパスは stdout に 1 行ずつ出る。進み具合のバーは stderr が端末のときだけ stderr に出るので、`path=$(sdctl txt2img "...")` のようにパスだけを受け取れる。
+
+## 出力形式（PNG / JPEG）
+
+形式は次の順で決まる。
+
+1. `--format png|jpeg`（`jpg` も可）
+2. `-o` のファイル名の拡張子（`.png` → PNG、`.jpg` / `.jpeg` → JPEG。大文字も可）。`-o` がディレクトリなら使わない
+3. `SDCTL_FORMAT` → config.yaml の `format`
+4. PNG
+
+- `--format` と `-o` の拡張子が食い違う（例: `--format jpeg -o out.png`）とエラーになり、生成は行われない。
+- JPEG は WebUI が返した PNG を sdctl が変換して書く。**PNG に埋め込まれた生成パラメータ（infotext）は JPEG には残らない。** 後で PNG Info から設定を読み返したい画像や、`hires` の途中段階の画像は PNG で保存する。
+- 品質は `--quality`（1〜100）> `SDCTL_JPEG_QUALITY` > config の `jpeg_quality` > 90。
 
 ## 出力ファイル命名
 
-- 名前を付けて保存するときは `-o` にディレクトリではなくファイルパスを渡す（`SDCTL_OUTPUT_DIR` があり、名前を気にしない場合は `-o` を省いてよい）。ユーザーがディレクトリを指定した場合はそのディレクトリ配下に適切なファイル名を付けて `-o <dir>/<filename>.png` にする。
+- 名前を付けて保存するときは `-o` にディレクトリではなくファイルパスを渡す（`SDCTL_OUTPUT_DIR` があり、名前を気にしない場合は `-o` を省いてよい）。拡張子が形式を決めるので、`SDCTL_FORMAT=jpeg` の環境で名前を付けるときは `.jpg` にする（`.png` にすると PNG で保存される）。ユーザーがディレクトリを指定した場合はそのディレクトリ配下に適切なファイル名を付けて `-o <dir>/<filename>.png` にする。
 - シナリオワークスペースで `prompt_XX_Y.yaml` を使う場合は `outputs/image_XX_Y.png` を標準名にする。例: `kutara_aki/01_example/prompt_02_1.yaml` → `-o kutara_aki/01_example/outputs/image_02_1.png`
 - プロンプトファイル名がない場合は用途が分かる短い snake_case 名を付ける。例: `portrait_desk.png`, `window_reading.png`
 - バッチ生成時もベース名を付ける（例: `-o result.png` → `result.0001.png`, `result.0002.png`, ...）
