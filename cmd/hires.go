@@ -25,6 +25,8 @@ Suitable for multi-stage upscaling (high-quality Latent Upscale workflow).`,
 }
 
 var hiresFlags struct {
+	format         string
+	quality        int
 	negativePrompt string
 	steps          int
 	cfgScale       float64
@@ -54,6 +56,8 @@ func init() {
 	f.Float64Var(&hiresFlags.denoise, "denoise", 0.30, "denoising strength (0.0-1.0)")
 	f.StringVar(&hiresFlags.upscaler, "upscaler", "Latent (nearest)", "upscaler name (see `sdctl upscalers`)")
 	f.StringVarP(&hiresFlags.output, "output", "o", "", "output file or directory (default: $SDCTL_OUTPUT_DIR or the current directory)")
+	f.StringVar(&hiresFlags.format, "format", "", "image format: png or jpeg (jpg) (default: -o extension, then $SDCTL_FORMAT, then png)")
+	f.IntVar(&hiresFlags.quality, "quality", 0, "JPEG quality 1-100 (default: $SDCTL_JPEG_QUALITY, then 90)")
 	f.StringVar(&hiresFlags.paramsFile, "params", "", "generation parameter config file (YAML) (default: $SDCTL_PARAMS; '' disables it)")
 	f.StringVar(&hiresFlags.promptFile, "prompt", "", "prompt file (YAML)")
 	f.StringVar(&hiresFlags.vae, "vae", "", "VAE model path (forge_additional_modules)")
@@ -74,6 +78,10 @@ func runHires(cmd *cobra.Command, args []string) error {
 	}
 
 	output, err := resolveOutput(cmd, hiresFlags.output, cfg.OutputDir)
+	if err != nil {
+		return fmt.Errorf("error: %w", err)
+	}
+	saveOpts, err := resolveSaveOptions(cmd, hiresFlags.format, hiresFlags.quality, output)
 	if err != nil {
 		return fmt.Errorf("error: %w", err)
 	}
@@ -183,7 +191,7 @@ func runHires(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("error: %w", err)
 	}
 
-	paths, err := saveImages(resp.Images, output)
+	paths, err := saveImages(resp.Images, output, saveOpts)
 	if err != nil {
 		return fmt.Errorf("error: %w", err)
 	}

@@ -18,6 +18,8 @@ var img2imgCmd = &cobra.Command{
 }
 
 var img2imgFlags struct {
+	format            string
+	quality           int
 	negativePrompt    string
 	steps             int
 	width             int
@@ -51,6 +53,8 @@ func init() {
 	f.IntVar(&img2imgFlags.batchCount, "batch-count", 1, "number of times to run generation")
 	f.IntVar(&img2imgFlags.batchSize, "batch-size", 1, "number of images per batch")
 	f.StringVarP(&img2imgFlags.output, "output", "o", "", "output file or directory (default: $SDCTL_OUTPUT_DIR or the current directory)")
+	f.StringVar(&img2imgFlags.format, "format", "", "image format: png or jpeg (jpg) (default: -o extension, then $SDCTL_FORMAT, then png)")
+	f.IntVar(&img2imgFlags.quality, "quality", 0, "JPEG quality 1-100 (default: $SDCTL_JPEG_QUALITY, then 90)")
 	f.StringVar(&img2imgFlags.paramsFile, "params", "", "generation parameter config file (YAML) (default: $SDCTL_PARAMS; '' disables it)")
 	f.StringVar(&img2imgFlags.promptFile, "prompt", "", "prompt file (YAML)")
 	f.StringVar(&img2imgFlags.vae, "vae", "", "VAE model path (forge_additional_modules)")
@@ -71,6 +75,10 @@ func runImg2Img(cmd *cobra.Command, args []string) error {
 	}
 
 	output, err := resolveOutput(cmd, img2imgFlags.output, cfg.OutputDir)
+	if err != nil {
+		return fmt.Errorf("error: %w", err)
+	}
+	saveOpts, err := resolveSaveOptions(cmd, img2imgFlags.format, img2imgFlags.quality, output)
 	if err != nil {
 		return fmt.Errorf("error: %w", err)
 	}
@@ -172,7 +180,7 @@ func runImg2Img(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("error: %w", err)
 	}
 
-	paths, err := saveImages(resp.Images, output)
+	paths, err := saveImages(resp.Images, output, saveOpts)
 	if err != nil {
 		return fmt.Errorf("error: %w", err)
 	}
