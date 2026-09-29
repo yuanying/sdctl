@@ -3,6 +3,7 @@ package config_test
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/yuanying/sdctl/internal/config"
@@ -137,5 +138,68 @@ func TestEmptyEnvDisablesFileDefaults(t *testing.T) {
 	}
 	if cfg.OutputDir != "" {
 		t.Errorf("empty SDCTL_OUTPUT_DIR should disable file output dir, got: %s", cfg.OutputDir)
+	}
+}
+
+func TestLoadFormatAndJPEGQualityFromFile(t *testing.T) {
+	unsetEnv(t, "SDCTL_FORMAT")
+	unsetEnv(t, "SDCTL_JPEG_QUALITY")
+	configFile := filepath.Join(t.TempDir(), "config.yaml")
+	os.WriteFile(configFile, []byte("format: jpeg\njpeg_quality: 80\n"), 0644)
+
+	cfg, err := config.Load(configFile)
+	if err != nil {
+		t.Fatalf("Load failed: %v", err)
+	}
+	if cfg.Format != "jpeg" {
+		t.Errorf("expected format jpeg, got %q", cfg.Format)
+	}
+	if cfg.JPEGQuality != 80 {
+		t.Errorf("expected jpeg_quality 80, got %d", cfg.JPEGQuality)
+	}
+}
+
+func TestFormatAndJPEGQualityEnvOverrideFile(t *testing.T) {
+	configFile := filepath.Join(t.TempDir(), "config.yaml")
+	os.WriteFile(configFile, []byte("format: jpeg\njpeg_quality: 80\n"), 0644)
+	t.Setenv("SDCTL_FORMAT", "png")
+	t.Setenv("SDCTL_JPEG_QUALITY", "70")
+
+	cfg, err := config.Load(configFile)
+	if err != nil {
+		t.Fatalf("Load failed: %v", err)
+	}
+	if cfg.Format != "png" {
+		t.Errorf("SDCTL_FORMAT should override file, got %q", cfg.Format)
+	}
+	if cfg.JPEGQuality != 70 {
+		t.Errorf("SDCTL_JPEG_QUALITY should override file, got %d", cfg.JPEGQuality)
+	}
+}
+
+func TestEmptyFormatEnvDisablesFileValue(t *testing.T) {
+	configFile := filepath.Join(t.TempDir(), "config.yaml")
+	os.WriteFile(configFile, []byte("format: jpeg\njpeg_quality: 80\n"), 0644)
+	t.Setenv("SDCTL_FORMAT", "")
+	t.Setenv("SDCTL_JPEG_QUALITY", "")
+
+	cfg, err := config.Load(configFile)
+	if err != nil {
+		t.Fatalf("Load failed: %v", err)
+	}
+	if cfg.Format != "" {
+		t.Errorf("expected empty format, got %q", cfg.Format)
+	}
+	if cfg.JPEGQuality != 0 {
+		t.Errorf("expected unset jpeg quality, got %d", cfg.JPEGQuality)
+	}
+}
+
+func TestInvalidJPEGQualityEnvIsError(t *testing.T) {
+	t.Setenv("SDCTL_JPEG_QUALITY", "high")
+
+	_, err := config.Load("/nonexistent/config.yaml")
+	if err == nil || !strings.Contains(err.Error(), "SDCTL_JPEG_QUALITY") {
+		t.Errorf("expected error naming SDCTL_JPEG_QUALITY, got %v", err)
 	}
 }
