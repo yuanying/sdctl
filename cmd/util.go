@@ -230,18 +230,18 @@ func validateScheduler(name string) error {
 	return api.ValidateSchedulerName(schedulers, name)
 }
 
-func saveImages(images []string, outputPath string) ([]string, error) {
+func saveImages(images []string, outputPath string, opts saveOptions) ([]string, error) {
 	isBatch := len(images) > 1
 
 	if outputPath != "" {
 		info, err := os.Stat(outputPath)
 		if err == nil && info.IsDir() {
-			return saveImagesToDir(images, outputPath)
+			return saveImagesToDir(images, outputPath, opts)
 		}
 		paths := make([]string, 0, len(images))
 		for i, imgData := range images {
 			dest := resolveUniqueFilePath(outputPath, isBatch)
-			data, err := base64.StdEncoding.DecodeString(imgData)
+			data, err := decodeImage(imgData, opts)
 			if err != nil {
 				return nil, fmt.Errorf("failed to decode image %d: %w", i+1, err)
 			}
@@ -253,7 +253,16 @@ func saveImages(images []string, outputPath string) ([]string, error) {
 		return paths, nil
 	}
 
-	return saveImagesToDir(images, "")
+	return saveImagesToDir(images, "", opts)
+}
+
+// decodeImage decodes base64 image data from the API and converts it to opts.format.
+func decodeImage(imgData string, opts saveOptions) ([]byte, error) {
+	data, err := base64.StdEncoding.DecodeString(imgData)
+	if err != nil {
+		return nil, err
+	}
+	return encodeImage(data, opts)
 }
 
 // resolveUniqueFilePath returns a path that does not conflict with existing files.
@@ -300,19 +309,19 @@ func findMaxIndexedSuffix(dir, base, ext string) int {
 	return max
 }
 
-// saveImagesToDir saves images as output-<time>-<n>.png in dir.
+// saveImagesToDir saves images as output-<time>-<n>.<ext> in dir (.png or .jpg by opts.format).
 // n skips names that already exist, so calls within the same second never overwrite each other.
-func saveImagesToDir(images []string, dir string) ([]string, error) {
+func saveImagesToDir(images []string, dir string, opts saveOptions) ([]string, error) {
 	base := now().Format("20060102-150405")
 	paths := make([]string, 0, len(images))
 	n := 1
 	for i, imgData := range images {
-		data, err := base64.StdEncoding.DecodeString(imgData)
+		data, err := decodeImage(imgData, opts)
 		if err != nil {
 			return nil, fmt.Errorf("failed to decode image %d: %w", i+1, err)
 		}
 		for ; ; n++ {
-			dest := filepath.Join(dir, fmt.Sprintf("output-%s-%d.png", base, n))
+			dest := filepath.Join(dir, fmt.Sprintf("output-%s-%d%s", base, n, opts.format.ext()))
 			err := writeNewFile(dest, data)
 			if errors.Is(err, fs.ErrExist) {
 				continue

@@ -86,7 +86,7 @@ func TestSaveImages_Single_NoConflict(t *testing.T) {
 	b64 := "aGVsbG8="
 	filePath := filepath.Join(dir, "output.png")
 
-	paths, err := saveImages([]string{b64}, filePath)
+	paths, err := saveImages([]string{b64}, filePath, saveOptions{format: formatPNG})
 	if err != nil {
 		t.Fatalf("saveImages failed: %v", err)
 	}
@@ -104,7 +104,7 @@ func TestSaveImages_Single_WithConflict(t *testing.T) {
 	filePath := filepath.Join(dir, "output.png")
 	os.WriteFile(filePath, []byte("existing"), 0644)
 
-	paths, err := saveImages([]string{b64}, filePath)
+	paths, err := saveImages([]string{b64}, filePath, saveOptions{format: formatPNG})
 	if err != nil {
 		t.Fatalf("saveImages failed: %v", err)
 	}
@@ -119,7 +119,7 @@ func TestSaveImages_Multiple_FilePath(t *testing.T) {
 	b64 := "aGVsbG8="
 	filePath := filepath.Join(dir, "output.png")
 
-	paths, err := saveImages([]string{b64, b64, b64}, filePath)
+	paths, err := saveImages([]string{b64, b64, b64}, filePath, saveOptions{format: formatPNG})
 	if err != nil {
 		t.Fatalf("saveImages failed: %v", err)
 	}
@@ -148,7 +148,7 @@ func TestSaveImages_Multiple_FilePath_ExistingFiles(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, "output.0001.png"), []byte("x"), 0644)
 	os.WriteFile(filepath.Join(dir, "output.0002.png"), []byte("x"), 0644)
 
-	paths, err := saveImages([]string{b64, b64}, filePath)
+	paths, err := saveImages([]string{b64, b64}, filePath, saveOptions{format: formatPNG})
 	if err != nil {
 		t.Fatalf("saveImages failed: %v", err)
 	}
@@ -167,7 +167,7 @@ func TestSaveImages_Single_DirOutput(t *testing.T) {
 	dir := t.TempDir()
 	b64 := "aGVsbG8="
 
-	paths, err := saveImages([]string{b64}, dir)
+	paths, err := saveImages([]string{b64}, dir, saveOptions{format: formatPNG})
 	if err != nil {
 		t.Fatalf("saveImages failed: %v", err)
 	}
@@ -183,7 +183,7 @@ func TestSaveImages_MultipleWithDir(t *testing.T) {
 	dir := t.TempDir()
 	b64 := "aGVsbG8="
 
-	paths, err := saveImages([]string{b64, b64, b64}, dir)
+	paths, err := saveImages([]string{b64, b64, b64}, dir, saveOptions{format: formatPNG})
 	if err != nil {
 		t.Fatalf("saveImages failed: %v", err)
 	}
@@ -367,7 +367,7 @@ func TestSaveImages_MultipleDefaultPath(t *testing.T) {
 	os.Chdir(dir)
 
 	b64 := "aGVsbG8="
-	paths, err := saveImages([]string{b64, b64}, "")
+	paths, err := saveImages([]string{b64, b64}, "", saveOptions{format: formatPNG})
 	if err != nil {
 		t.Fatalf("saveImages failed: %v", err)
 	}

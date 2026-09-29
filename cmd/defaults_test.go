@@ -107,11 +107,12 @@ func TestSaveImagesToDir_SameSecondDoesNotOverwrite(t *testing.T) {
 	now = func() time.Time { return fixed }
 	defer func() { now = orig }()
 
-	first, err := saveImages([]string{"Zmlyc3Q="}, dir) // "first"
+	opts := saveOptions{format: formatPNG}
+	first, err := saveImages([]string{"Zmlyc3Q="}, dir, opts) // "first"
 	if err != nil {
 		t.Fatalf("first saveImages failed: %v", err)
 	}
-	second, err := saveImages([]string{"c2Vjb25k", "dGhpcmQ="}, dir) // "second", "third"
+	second, err := saveImages([]string{"c2Vjb25k", "dGhpcmQ="}, dir, opts) // "second", "third"
 	if err != nil {
 		t.Fatalf("second saveImages failed: %v", err)
 	}
@@ -175,11 +176,13 @@ type fakeServer struct {
 	*httptest.Server
 	mu     sync.Mutex
 	bodies map[string]map[string]any
+	// image is the base64 image returned by txt2img/img2img.
+	image string
 }
 
 func newFakeServer(t *testing.T) *fakeServer {
 	t.Helper()
-	fs := &fakeServer{bodies: map[string]map[string]any{}}
+	fs := &fakeServer{bodies: map[string]map[string]any{}, image: "aGVsbG8="}
 	fs.Server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/sdapi/v1/progress":
@@ -191,8 +194,9 @@ func newFakeServer(t *testing.T) *fakeServer {
 			json.NewDecoder(r.Body).Decode(&body)
 			fs.mu.Lock()
 			fs.bodies[r.URL.Path] = body
+			img := fs.image
 			fs.mu.Unlock()
-			json.NewEncoder(w).Encode(map[string]any{"images": []string{"aGVsbG8="}})
+			json.NewEncoder(w).Encode(map[string]any{"images": []string{img}})
 		default:
 			http.NotFound(w, r)
 		}
@@ -239,6 +243,16 @@ func resetFlags(t *testing.T) {
 // runCLI executes sdctl with args and returns what was written to stdout.
 func runCLI(t *testing.T, args ...string) string {
 	t.Helper()
+	out, err := runCLIErr(t, args...)
+	if err != nil {
+		t.Fatalf("sdctl %v failed: %v", args, err)
+	}
+	return out
+}
+
+// runCLIErr executes sdctl with args and returns stdout and the command error.
+func runCLIErr(t *testing.T, args ...string) (string, error) {
+	t.Helper()
 	resetFlags(t)
 	t.Cleanup(func() { resetFlags(t) })
 
@@ -261,10 +275,7 @@ func runCLI(t *testing.T, args ...string) string {
 	w.Close()
 	os.Stdout = origStdout
 	out := <-done
-	if execErr != nil {
-		t.Fatalf("sdctl %v failed: %v", args, execErr)
-	}
-	return string(out)
+	return string(out), execErr
 }
 
 func writeParams(t *testing.T, content string) string {
