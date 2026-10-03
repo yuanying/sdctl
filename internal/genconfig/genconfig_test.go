@@ -176,3 +176,53 @@ func TestLoadPromptConfig_InvalidYAML(t *testing.T) {
 		t.Fatal("expected error for invalid YAML, got nil")
 	}
 }
+
+func TestLoadParamConfig_AlwaysonScripts(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "params.yaml")
+	content := `
+alwayson_scripts:
+  ADetailer:
+    args:
+      - true
+      - false
+      - ad_model: face_yolov8n.pt
+        ad_denoising_strength: 0.4
+        ad_inpaint_only_masked: true
+`
+	os.WriteFile(path, []byte(content), 0644)
+
+	cfg, err := genconfig.LoadParamConfig(path)
+	if err != nil {
+		t.Fatalf("LoadParamConfig failed: %v", err)
+	}
+
+	scripts := cfg.AlwaysonScriptsValue()
+	adetailer, ok := scripts["ADetailer"].(map[string]any)
+	if !ok {
+		t.Fatalf("unexpected ADetailer: %v", scripts["ADetailer"])
+	}
+	args, ok := adetailer["args"].([]any)
+	if !ok || len(args) != 3 {
+		t.Fatalf("unexpected args: %v", adetailer["args"])
+	}
+	if args[0] != true || args[1] != false {
+		t.Errorf("unexpected leading args: %v", args[:2])
+	}
+	unit, ok := args[2].(map[string]any)
+	if !ok {
+		t.Fatalf("unexpected ADetailer unit: %v", args[2])
+	}
+	if unit["ad_model"] != "face_yolov8n.pt" || unit["ad_denoising_strength"] != 0.4 || unit["ad_inpaint_only_masked"] != true {
+		t.Errorf("unexpected ADetailer unit: %v", unit)
+	}
+}
+
+func TestParamConfig_AlwaysonScriptsValue_Unset(t *testing.T) {
+	var nilCfg *genconfig.ParamConfig
+	if got := nilCfg.AlwaysonScriptsValue(); got != nil {
+		t.Errorf("expected nil from nil config, got %v", got)
+	}
+	if got := (&genconfig.ParamConfig{}).AlwaysonScriptsValue(); got != nil {
+		t.Errorf("expected nil when unset, got %v", got)
+	}
+}

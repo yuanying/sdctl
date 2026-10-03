@@ -167,6 +167,7 @@ func runHires(cmd *cobra.Command, args []string) error {
 			BatchSize:                         1,
 			OverrideSettings:                  overrideSettings,
 			OverrideSettingsRestoreAfterwards: boolPtrIfSet(overrideSettings),
+			AlwaysonScripts:                   paramCfg.AlwaysonScriptsValue(),
 		},
 		InitImages:        []string{base64.StdEncoding.EncodeToString(imageData)},
 		DenoisingStrength: resolveFloat64(cmd, "denoise", hiresFlags.denoise, paramCfg.DenoisingStrengthValue()),

@@ -34,6 +34,7 @@ type Txt2ImgRequest struct {
 	BatchSize                         int            `json:"batch_size,omitempty"`
 	OverrideSettings                  map[string]any `json:"override_settings,omitempty"`
 	OverrideSettingsRestoreAfterwards *bool          `json:"override_settings_restore_afterwards,omitempty"`
+	AlwaysonScripts                   map[string]any `json:"alwayson_scripts,omitempty"`
 	EnableHR                          bool           `json:"enable_hr,omitempty"`
 	HRScale                           float64        `json:"hr_scale,omitempty"`
 	HRUpscaler                        string         `json:"hr_upscaler,omitempty"`

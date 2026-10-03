@@ -156,6 +156,7 @@ func runImg2Img(cmd *cobra.Command, args []string) error {
 			BatchSize:                         resolveInt(cmd, "batch-size", img2imgFlags.batchSize, paramCfg.BatchSizeValue()),
 			OverrideSettings:                  overrideSettings,
 			OverrideSettingsRestoreAfterwards: boolPtrIfSet(overrideSettings),
+			AlwaysonScripts:                   paramCfg.AlwaysonScriptsValue(),
 		},
 		InitImages:        []string{base64.StdEncoding.EncodeToString(imageData)},
 		DenoisingStrength: resolveFloat64(cmd, "denoising", img2imgFlags.denoisingStrength, paramCfg.DenoisingStrengthValue()),

@@ -19,6 +19,7 @@ type ParamConfig struct {
 	BatchSize         *int           `yaml:"batch_size"`
 	DenoisingStrength *float64       `yaml:"denoising_strength"`
 	OverrideSettings  map[string]any `yaml:"override_settings"`
+	AlwaysonScripts   map[string]any `yaml:"alwayson_scripts"`
 	EnableHR          *bool          `yaml:"enable_hr"`
 	HRScale           *float64       `yaml:"hr_scale"`
 	HRUpscaler        *string        `yaml:"hr_upscaler"`
@@ -125,6 +126,13 @@ func (c *ParamConfig) OverrideSettingsValue() map[string]any {
 		return nil
 	}
 	return c.OverrideSettings
+}
+
+func (c *ParamConfig) AlwaysonScriptsValue() map[string]any {
+	if c == nil {
+		return nil
+	}
+	return c.AlwaysonScripts
 }
 
 func (c *ParamConfig) EnableHRValue() *bool {

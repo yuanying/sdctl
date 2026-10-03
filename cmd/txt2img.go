@@ -143,6 +143,7 @@ func runTxt2Img(cmd *cobra.Command, args []string) error {
 		BatchSize:                         resolveInt(cmd, "batch-size", txt2imgFlags.batchSize, paramCfg.BatchSizeValue()),
 		OverrideSettings:                  overrideSettings,
 		OverrideSettingsRestoreAfterwards: boolPtrIfSet(overrideSettings),
+		AlwaysonScripts:                   paramCfg.AlwaysonScriptsValue(),
 	}
 	if enableHR {
 		req.EnableHR = true

@@ -136,6 +136,26 @@ CLI フラグは YAML より優先される。プロンプト引数を指定し�
 
 `params.yaml` には `model:` / `vae:` / `text_encoder:` キーは書かない。必ず `override_settings` 配下に書く。
 
+### alwayson_scripts — 拡張（ADetailer など）の指定
+
+`params.yaml` の `alwayson_scripts` は、txt2img・img2img・hires の要求の `alwayson_scripts` にそのまま送られる。CLI フラグは無い。書かなければ要求に含まれない。
+読む params は 1 ファイルだけ（`--params`、無ければ `$SDCTL_PARAMS`）なので、`--params` を渡すと既定の params の `alwayson_scripts` も含めて丸ごと置き換わる。
+
+ADetailer で顔を描き直す例（WebUI に ADetailer が入っていること）。args の先頭 2 つは「ADetailer を有効にするか」「img2img では ADetailer を飛ばすか」で、その後ろのオブジェクト 1 つが 1 ユニット。
+
+```yaml
+alwayson_scripts:
+  ADetailer:
+    args:
+      - true
+      - false
+      - ad_model: "face_yolov8n.pt"
+        ad_denoising_strength: 0.4
+        ad_inpaint_only_masked: true
+```
+
+効いていれば、生成情報（PNG の `parameters`）に `ADetailer model: face_yolov8n.pt` が出る。
+
 ## 既定値（環境変数）
 
 `sdctl txt2img` / `img2img` / `hires` は、フラグを省いたときに次の既定値を使う。優先順位は「フラグ > 環境変数 > config.yaml」。
