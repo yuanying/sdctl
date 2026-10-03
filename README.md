@@ -183,7 +183,27 @@ override_settings:
   forge_additional_modules:                 # anima models only; use [] for SDXL
     - "qwen_image_vae.safetensors"          # model name or full path
     - "qwen_3_06b_base.safetensors"
+alwayson_scripts:            # passed as-is to the API's alwayson_scripts (see below)
+  ADetailer:
+    args: [true, false, {ad_model: "face_yolov8n.pt"}]
 ```
+
+`alwayson_scripts` is sent unchanged as the `alwayson_scripts` field of the txt2img, img2img and hires requests, so any always-on script (extension) installed in the WebUI can be configured from params. It has no CLI flag. When it is not written, the request has no `alwayson_scripts`, same as before. Only one params file is read (`--params`, otherwise `$SDCTL_PARAMS`), so `--params` replaces the whole default params, including its `alwayson_scripts`; the two files are not merged.
+
+Example: re-draw faces with [ADetailer](https://github.com/Bing-su/adetailer) (the extension must be installed in the WebUI). The first two args are "enable ADetailer" and "skip ADetailer on img2img"; each following object is one ADetailer unit.
+
+```yaml
+alwayson_scripts:
+  ADetailer:
+    args:
+      - true
+      - false
+      - ad_model: "face_yolov8n.pt"
+        ad_denoising_strength: 0.4
+        ad_inpaint_only_masked: true
+```
+
+The generation info (PNG `parameters`) then contains `ADetailer model: face_yolov8n.pt`.
 
 **Prompt file** (`prompt.yaml`) — positive prompt and optional negative prompt override:
 
