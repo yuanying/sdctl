@@ -17,7 +17,7 @@
 5. **ステップ数** — `--steps`。デフォルト: `20`
 6. **デノイジング強度** — `--denoise`。デフォルト: `0.30`。`0.30`〜`0.35` が Anima 系・SDXL 系ともに扱いやすい（上げるほど構図が変化する）
 7. **アップスケーラー** — `--upscaler`。デフォルト: `Latent (nearest)`（下記参照）
-8. **model / VAE / text encoder** — Anima 系は `--vae` / `--text-encoder` が必須。SDXL 系は `--model` のみで、直前が Anima 系だった場合は残留モジュールのクリアが要る（`config.md` 参照）
+8. **model / VAE / text encoder** — Anima 系・MOSS-Image 系は `--vae` / `--text-encoder` が必須（MOSS-Image はシフト `--distilled-cfg-scale 5` も付ける）。SDXL 系は `--model` のみで、直前が Anima 系だった場合は残留モジュールのクリアが要る（`config.md` 参照）
 9. **設定ファイル** — `--params params.yaml` / `--prompt prompt.yaml`
 10. **出力先** — ファイルパスを指定（`config.md` の出力命名ルール参照）
 

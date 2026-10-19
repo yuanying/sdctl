@@ -12,6 +12,7 @@ type ParamConfig struct {
 	Width             *int           `yaml:"width"`
 	Height            *int           `yaml:"height"`
 	CFGScale          *float64       `yaml:"cfg_scale"`
+	DistilledCFGScale *float64       `yaml:"distilled_cfg_scale"`
 	Sampler           *string        `yaml:"sampler"`
 	Scheduler         *string        `yaml:"scheduler"`
 	Seed              *int64         `yaml:"seed"`
@@ -70,6 +71,13 @@ func (c *ParamConfig) CFGScaleValue() *float64 {
 		return nil
 	}
 	return c.CFGScale
+}
+
+func (c *ParamConfig) DistilledCFGScaleValue() *float64 {
+	if c == nil {
+		return nil
+	}
+	return c.DistilledCFGScale
 }
 
 func (c *ParamConfig) SamplerValue() *string {

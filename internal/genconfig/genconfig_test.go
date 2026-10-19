@@ -226,3 +226,26 @@ func TestParamConfig_AlwaysonScriptsValue_Unset(t *testing.T) {
 		t.Errorf("expected nil when unset, got %v", got)
 	}
 }
+
+func TestLoadParamConfig_DistilledCFGScale(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "params.yaml")
+	os.WriteFile(path, []byte("distilled_cfg_scale: 5\n"), 0644)
+
+	cfg, err := genconfig.LoadParamConfig(path)
+	if err != nil {
+		t.Fatalf("LoadParamConfig failed: %v", err)
+	}
+	if v := cfg.DistilledCFGScaleValue(); v == nil || *v != 5 {
+		t.Errorf("unexpected DistilledCFGScale: %v", v)
+	}
+}
+
+func TestParamConfig_DistilledCFGScaleValue_Unset(t *testing.T) {
+	var nilCfg *genconfig.ParamConfig
+	if got := nilCfg.DistilledCFGScaleValue(); got != nil {
+		t.Errorf("expected nil from nil config, got %v", got)
+	}
+	if got := (&genconfig.ParamConfig{}).DistilledCFGScaleValue(); got != nil {
+		t.Errorf("expected nil when unset, got %v", got)
+	}
+}

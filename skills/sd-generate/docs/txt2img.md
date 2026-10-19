@@ -10,21 +10,22 @@
 リポジトリ内に `params.yaml` と `prompt_XX_Y.yaml` があれば `--params` / `--prompt` を優先する。
 `params.yaml` に `batch_size` がない場合はユーザーが別指定しない限り `--batch-size 2` を付ける。
 
-1. **モデル系統** — Anima 系（`anima_`）か SDXL 系（`IL_` / `Pony_`）かを最初に決める。以降のデフォルト値と VAE / text encoder の要否がここで決まる（`config.md` 参照）
-2. **プロンプト** — 英語推奨。Anima 系はタグ構造が独自なので `anima-prompt` スキルを使う
-3. **ネガティブプロンプト** — 省略可
+1. **モデル系統** — Anima 系（`anima_`）か MOSS-Image 系（`moss-image_`）か SDXL 系（`IL_` / `Pony_`）かを最初に決める。以降のデフォルト値と VAE / text encoder の要否がここで決まる（`config.md` 参照）
+2. **プロンプト** — 英語推奨。Anima 系はタグ構造が独自なので `anima-prompt` スキルを使う。MOSS-Image 系は自然文で書き、描かせたい文字は引用符で囲む
+3. **ネガティブプロンプト** — 省略可。MOSS-Image 系は空にする
 4. **設定ファイル** — `--params params.yaml` / `--prompt prompt.yaml`（あれば優先）
 5. **画像サイズ** — `sdctl` のデフォルトは `512x512`。SDXL 系・Anima 系ともに総画素 約1MP（1024×1024 相当）を推奨
-6. **ステップ数** — `sdctl` のデフォルトは `20`。推奨は Anima 30〜50 / SDXL 25〜35
-7. **CFG scale** — `sdctl` のデフォルトは `7`。推奨は Anima 4〜5 / SDXL 5〜7
-8. **sampler** — `sdctl` のデフォルトは `Euler a`。Anima は `ER SDE` を推奨（一覧は `sdctl samplers list`）
-9. **scheduler** — 省略可。Anima は `simple`、SDXL は `karras` を推奨（一覧は `sdctl schedulers list`）
-10. **model** — `--model`（値は `sdctl models list` と完全一致）
-11. **VAE / text encoder** — Anima 系のみ必須。SDXL 系では付けない。SDXL 系に切り替える際は残留モジュールのクリアが要る（`config.md` 参照）
-12. **Hires. fix** — 生成と同時にアップスケールする場合のみ有効にする（下記参照）
-13. **seed** — デフォルト: `-1`（ランダム）
-14. **batch** — 標準: `--batch-size 2 --batch-count 1`
-15. **出力先** — ファイルパスを指定（`config.md` の出力命名ルール参照）
+6. **ステップ数** — `sdctl` のデフォルトは `20`。推奨は Anima 30〜50 / MOSS-Image 50 / SDXL 25〜35
+7. **CFG scale** — `sdctl` のデフォルトは `7`。推奨は Anima 4〜5 / MOSS-Image 3 / SDXL 5〜7
+8. **shift（Distilled CFG）** — `--distilled-cfg-scale`。省略時は送らず、Forge の既定 3.5 になる。MOSS-Image は `5`。Anima / SDXL では付けない
+9. **sampler** — `sdctl` のデフォルトは `Euler a`。Anima は `ER SDE`、MOSS-Image は `Euler` を推奨（一覧は `sdctl samplers list`）
+10. **scheduler** — 省略可。Anima・MOSS-Image は `simple`、SDXL は `karras` を推奨（一覧は `sdctl schedulers list`）
+11. **model** — `--model`（値は `sdctl models list` と完全一致）
+12. **VAE / text encoder** — Anima 系・MOSS-Image 系で必須（MOSS-Image は 2 つとも）。SDXL 系では付けない。SDXL 系に切り替える際は残留モジュールのクリアが要る（`config.md` 参照）
+13. **Hires. fix** — 生成と同時にアップスケールする場合のみ有効にする（下記参照）
+14. **seed** — デフォルト: `-1`（ランダム）
+15. **batch** — 標準: `--batch-size 2 --batch-count 1`
+16. **出力先** — ファイルパスを指定（`config.md` の出力命名ルール参照）
 
 ### Hires. fix フラグ
 
@@ -72,6 +73,19 @@ sdctl txt2img "<prompt>" \
   --width 1024 --height 1024 \
   --steps 35 --cfg-scale 4.5 \
   --sampler "ER SDE" --scheduler "simple" \
+  -o <output_file>
+```
+
+MOSS-Image 系は text encoder と VAE を 2 つとも加え、シフトを `--distilled-cfg-scale` で渡す。ネガティブ側の層スキップ（`moss_uncond_skip_layers`）まで固定したい場合は `config.md` の MOSS-Image 系 params.yaml を使う：
+
+```bash
+sdctl txt2img "<prompt>" \
+  --model moss-image_moss_image_sft_bf16 \
+  --vae flux2-vae.safetensors \
+  --text-encoder qwen3.5_9b_bf16.safetensors \
+  --width 1024 --height 1024 \
+  --steps 50 --cfg-scale 3 --distilled-cfg-scale 5 \
+  --sampler "Euler" --scheduler "simple" \
   -o <output_file>
 ```
 

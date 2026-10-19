@@ -68,6 +68,15 @@ func resolveFloat64(cmd *cobra.Command, flagName string, flagVal float64, cfgVal
 	return *cfgVal
 }
 
+// resolveOptionalFloat64 is resolveFloat64 for fields the server should only
+// receive when the user set them; it returns nil when neither is set.
+func resolveOptionalFloat64(cmd *cobra.Command, flagName string, flagVal float64, cfgVal *float64) *float64 {
+	if cmd.Flags().Changed(flagName) {
+		return &flagVal
+	}
+	return cfgVal
+}
+
 func resolveString(cmd *cobra.Command, flagName string, flagVal string, cfgVal *string) string {
 	if cmd.Flags().Changed(flagName) || cfgVal == nil {
 		return flagVal
