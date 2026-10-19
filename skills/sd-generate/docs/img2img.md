@@ -11,7 +11,7 @@
 `params.yaml` に `batch_size` がない場合はユーザーが別指定しない限り `--batch-size 2` を付ける。
 
 1. **入力画像パス** — 変換元の画像ファイルパス（必須）
-2. **モデル系統** — Anima 系（`anima_`）か SDXL 系（`IL_` / `Pony_`）か。元画像を生成したモデルに合わせるのが基本（`config.md` 参照）
+2. **モデル系統** — Anima 系（`anima_`）か MOSS-Image 系（`moss-image_`）か SDXL 系（`IL_` / `Pony_`）か。元画像を生成したモデルに合わせるのが基本（`config.md` 参照）
 3. **プロンプト** — 英語推奨。Anima 系はタグ構造が独自なので `anima-prompt` スキルを使う
 4. **ネガティブプロンプト** — 省略可
 5. **設定ファイル** — `--params params.yaml` / `--prompt prompt.yaml`（あれば優先）
@@ -22,7 +22,7 @@
 10. **sampler** — `sdctl` のデフォルトは `Euler a`。Anima は `ER SDE` を推奨（一覧は `sdctl samplers list`）
 11. **scheduler** — 省略可。Anima は `simple`、SDXL は `karras` を推奨（一覧は `sdctl schedulers list`）
 12. **model** — `--model`（値は `sdctl models list` と完全一致）
-13. **VAE / text encoder** — Anima 系のみ必須。SDXL 系では付けない。SDXL 系に切り替える際は残留モジュールのクリアが要る（`config.md` 参照）
+13. **VAE / text encoder** — Anima 系・MOSS-Image 系で必須（MOSS-Image は 2 つとも。シフトは `--distilled-cfg-scale 5`）。SDXL 系では付けない。SDXL 系に切り替える際は残留モジュールのクリアが要る（`config.md` 参照）
 14. **seed** — デフォルト: `-1`（ランダム）
 15. **batch** — 標準: `--batch-size 2 --batch-count 1`
 16. **出力先** — ファイルパスを指定（`config.md` の出力命名ルール参照）

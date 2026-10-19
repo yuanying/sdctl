@@ -101,6 +101,16 @@ sdctl txt2img "anime girl" \
   --vae qwen_image_vae.safetensors \
   --text-encoder qwen_3_06b_base.safetensors
 
+# MOSS-Image: both the text encoder (Qwen3.5-9B) and the FLUX.2 VAE are required.
+# Recommended: Euler / simple / 50 steps / CFG 3 / shift 5 / empty negative prompt.
+# The shift is sent as distilled_cfg_scale (Forge's default is 3.5).
+sdctl txt2img "a coffee shop sign that reads \"MOONLIGHT COFFEE\"" \
+  --model moss-image_moss_image_sft_bf16 \
+  --vae flux2-vae.safetensors \
+  --text-encoder qwen3.5_9b_bf16.safetensors \
+  --width 1024 --height 1024 --steps 50 --cfg-scale 3 \
+  --distilled-cfg-scale 5 --sampler Euler --scheduler simple
+
 # Modules are NOT restored after generation (see ADR 0016), so switching from an
 # anima model back to SDXL leaves the anima modules loaded and silently produces
 # a black image. Clear them with an empty list in params.yaml:
@@ -167,6 +177,7 @@ steps: 30
 width: 768
 height: 768
 cfg_scale: 8.0
+distilled_cfg_scale: 3.5   # Forge only: Flux guidance / MOSS-Image shift (omitted when unset)
 sampler: "DPM++ 2M"
 scheduler: "karras"          # lowercase id from `sdctl schedulers list`
 seed: -1
@@ -204,6 +215,29 @@ alwayson_scripts:
 ```
 
 The generation info (PNG `parameters`) then contains `ADetailer model: face_yolov8n.pt`.
+
+`distilled_cfg_scale` (and `--distilled-cfg-scale`) is sent as the `distilled_cfg_scale` field of the txt2img, img2img and hires requests. Forge uses it as the Distilled CFG (guidance) of Flux models and as the flow shift of MOSS-Image (shown as `Shift` in the infotext). It is sent only when set, so the server default (3.5 on Forge) applies otherwise and non-Forge servers never receive it.
+
+Example: MOSS-Image SFT with the recommended settings. Both modules are required; with only one of them, or with modules left over from another model family, generation fails (e.g. `You do not have Qwen3.5 state dict!`). `moss_uncond_skip_layers` skips DiT layer 22 on the negative (unconditional) pass; Forge's default is `"22"`, and `""` disables it. Override settings persist on the WebUI (see ADR 0016), so writing it explicitly keeps the result independent of earlier runs.
+
+```yaml
+negative_prompt: ""
+steps: 50
+width: 1024
+height: 1024
+cfg_scale: 3
+distilled_cfg_scale: 5       # shift
+sampler: "Euler"
+scheduler: "simple"
+override_settings:
+  sd_model_checkpoint: "moss-image_moss_image_sft_bf16"  # or moss-image_moss_image_base_bf16
+  forge_additional_modules:
+    - "qwen3.5_9b_bf16.safetensors"
+    - "flux2-vae.safetensors"
+  moss_uncond_skip_layers: "22"
+```
+
+The infotext then contains `CFG scale: 3.0, Shift: 5.0`.
 
 **Prompt file** (`prompt.yaml`) — positive prompt and optional negative prompt override:
 
@@ -255,6 +289,7 @@ Latent 系アップスケーラー（`Latent (nearest)` など）は `/sdapi/v1/
     --width int            image width (default 512)  # not used in hires (auto-computed)
     --height int           image height (default 512) # not used in hires (auto-computed)
     --cfg-scale float      CFG scale (default 7)
+    --distilled-cfg-scale float  Forge Distilled CFG: Flux guidance / MOSS-Image shift (default: not sent, server uses 3.5)
     --sampler string       sampler name (default "Euler a")
     --seed int             seed, -1 for random (default -1)
     --batch-count int      number of times to run generation (default 1)

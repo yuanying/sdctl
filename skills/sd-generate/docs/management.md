@@ -15,7 +15,7 @@ sdctl models set <model_name>
 生成コマンド単位でモデルを指定する場合は `models set` ではなく `--model <model_name>` を使う。
 `--model` の値は `sdctl models list` に出るモデル名と完全一致させる。
 
-モデル名のプレフィックス（`anima_` / `IL_` / `Pony_` / `SD1_`）で系統が分かる。系統によって VAE / text encoder の要否と推奨パラメータが変わるため、一覧をユーザーに提示するときは系統ごとにまとめる（`config.md` 参照）。
+モデル名のプレフィックス（`anima_` / `moss-image_` / `IL_` / `Pony_` / `SD1_`）で系統が分かる。系統によって VAE / text encoder の要否と推奨パラメータが変わるため、一覧をユーザーに提示するときは系統ごとにまとめる（`config.md` 参照）。
 
 ## modules
 
@@ -27,7 +27,7 @@ sdctl modules
 
 出力にある module name または full path は、`--vae` / `--text-encoder` および `params.yaml` の `override_settings.forge_additional_modules` に指定できる（詳細は `config.md` 参照）。
 
-このモジュールが必要なのは Anima 系（`anima_`）のモデルだけで、SDXL 系（`IL_` / `Pony_`）や SD1 系では指定しない。
+このモジュールが必要なのは Anima 系（`anima_`）と MOSS-Image 系（`moss-image_`。text encoder と VAE の 2 つ）のモデルだけで、SDXL 系（`IL_` / `Pony_`）や SD1 系では指定しない。
 
 ## upscalers
 

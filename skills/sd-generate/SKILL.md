@@ -2,7 +2,7 @@
 name: sd-generate
 description: |
   sdctl CLI を使って Stable Diffusion WebUI (AUTOMATIC1111) で画像生成・変換・生成環境確認を行うスキル。
-  トリガー: "sd-generate", "/sd-generate", "画像生成", "stable diffusion", "StableDiffusion", "SD画像", "txt2img", "img2img", "hires", "アップスケール", "モデル一覧", "model", "modules", "anima", "sdxl", "illustrious", "pony", "vae", "text encoder", "sampler", "scheduler", "upscaler", "params.yaml", "prompt.yaml"
+  トリガー: "sd-generate", "/sd-generate", "画像生成", "stable diffusion", "StableDiffusion", "SD画像", "txt2img", "img2img", "hires", "アップスケール", "モデル一覧", "model", "modules", "anima", "moss-image", "sdxl", "illustrious", "pony", "vae", "text encoder", "sampler", "scheduler", "upscaler", "params.yaml", "prompt.yaml"
   使用場面: (1) テキストプロンプトから画像を生成したいとき、(2) 既存画像をimg2imgで変換したいとき、(3) 既存画像をlatentアップスケールしたいとき、(4) モデル・サンプラー・スケジューラー・VAE・text encoder・アップスケーラーを確認したいとき、(5) seed・CFG・batch・model・VAE・text encoder・YAML設定ファイルなどsdctl生成パラメータを指定して実行したいとき
 ---
 
@@ -37,6 +37,7 @@ $ARGUMENTS
 | モデル名のプレフィックス | 系統 | VAE / text encoder |
 |---|---|---|
 | `anima_` | Anima | 必須 |
+| `moss-image_` | MOSS-Image | 必須（2 つとも） |
 | `IL_` / `Pony_` | SDXL | 不要 |
 | `SD1_` | SD 1.5 | 不要 |
 

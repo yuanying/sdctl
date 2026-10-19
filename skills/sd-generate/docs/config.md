@@ -7,6 +7,7 @@
 | プレフィックス | 系統 | VAE / text encoder | 例 |
 |---|---|---|---|
 | `anima_` | Anima | **必須** | `anima_anima-base-v1.0` |
+| `moss-image_` | MOSS-Image | **必須**（text encoder と VAE の 2 つ） | `moss-image_moss_image_sft_bf16` |
 | `IL_` | Illustrious（SDXL） | **不要** | `IL_illustrij_v4` |
 | `Pony_` | Pony（SDXL） | **不要** | `Pony_prefectPonyXL_v40` |
 | `SD1_` | SD 1.5 | **不要** | `SD1_QuinceMixV2` |
@@ -26,6 +27,22 @@ sdctl txt2img "<prompt>" \
 
 VAE と text encoder は `sdctl modules` の一覧から選ぶ。module name と full path のどちらでも指定できる。
 
+### MOSS-Image 系 — text encoder と VAE の 2 つが必須
+
+text encoder（Qwen3.5-9B）と VAE（FLUX.2 VAE）の**両方**を指定する。片方だけ、あるいは Anima のモジュールが残っていると失敗する（`You do not have Qwen3.5 state dict!` など）。
+推奨設定はシフト（`--distilled-cfg-scale 5`）まで含むので、`params.yaml`（後述の MOSS-Image 系の例）を使うのが確実。
+
+```bash
+sdctl txt2img "<prompt>" \
+  --model moss-image_moss_image_sft_bf16 \
+  --vae flux2-vae.safetensors \
+  --text-encoder qwen3.5_9b_bf16.safetensors \
+  --width 1024 --height 1024 --steps 50 --cfg-scale 3 \
+  --distilled-cfg-scale 5 --sampler "Euler" --scheduler "simple"
+```
+
+モデルは SFT（`moss-image_moss_image_sft_bf16`）と Base（`moss-image_moss_image_base_bf16`）がある。通常は SFT を使う。
+
 ### SDXL（`IL_` / `Pony_`）・SD1 系 — `--model` のみ
 
 VAE はチェックポイントに内蔵されているため `--vae` / `--text-encoder` は付けない。
@@ -38,6 +55,7 @@ sdctl txt2img "<prompt>" --model IL_illustrij_v4
 
 `override_settings` は `override_settings_restore_afterwards: false` で送信され、生成後も WebUI 側に維持される（ADR 0016）。
 そのため **Anima で生成した直後に SDXL モデルを `--model` だけで実行すると、Anima の qwen モジュールが残ったままになる**。
+MOSS-Image から他の系統に切り替えるときも同じで、MOSS-Image のモジュールが残る。Anima ⇔ MOSS-Image の切り替えでは、新しい系統のモジュールを必ず 2 つとも指定し直す。
 このとき API はエラーを返さず、**真っ黒な画像が出力される**（検証済み）。
 
 `--vae` / `--text-encoder` に空文字を渡してもクリアされない。`params.yaml` で空配列を渡す。
@@ -62,13 +80,17 @@ curl -s http://localhost:7860/sdapi/v1/options | jq '{sd_model_checkpoint, forge
 
 指定がない場合の出発点。ユーザー指定があればそちらを優先する。
 
-| | Anima 系 | SDXL 系（`IL_` / `Pony_`） |
-|---|---|---|
-| steps | 30〜50 | 25〜35 |
-| CFG scale | 4〜5 | 5〜7 |
-| sampler | `ER SDE`（柔らかくしたい場合は `Euler a`） | `Euler a` / `DPM++ 2M` |
-| scheduler | `simple` | `karras` |
-| 解像度 | 総画素 約1MP（1024×1024 相当）。幅・高さとも16の倍数 | 同左（SDXL のネイティブ解像度） |
+| | Anima 系 | MOSS-Image 系 | SDXL 系（`IL_` / `Pony_`） |
+|---|---|---|---|
+| steps | 30〜50 | 50 | 25〜35 |
+| CFG scale | 4〜5 | 3 | 5〜7 |
+| shift（`distilled_cfg_scale`） | 指定しない | 5 | 指定しない |
+| sampler | `ER SDE`（柔らかくしたい場合は `Euler a`） | `Euler` | `Euler a` / `DPM++ 2M` |
+| scheduler | `simple` | `simple` | `karras` |
+| ネガティブプロンプト | 使う | **空にする** | 使う |
+| 解像度 | 総画素 約1MP（1024×1024 相当）。幅・高さとも16の倍数 | 1024×1024 / 1456×1456 など | 同左（SDXL のネイティブ解像度） |
+
+MOSS-Image は自然文のプロンプト（英語推奨、最大 4K トークン）で、看板などの文字も描ける。描かせたい文字は `"MOONLIGHT COFFEE"` のように引用符で囲む。1024×1024 / 50 steps で 1 枚およそ 30〜50 秒かかる。
 
 Anima 側の値と、プロンプトのタグ構造は `anima-prompt` スキルに準拠する。Anima 向けプロンプトを組み立てる場合はそちらを使う。
 
@@ -106,6 +128,32 @@ override_settings:
     - "qwen_image_vae.safetensors"   # VAE を先
     - "qwen_3_06b_base.safetensors"  # text encoder を後
 ```
+
+MOSS-Image 系の例（推奨設定）：
+
+```yaml
+negative_prompt: ""          # ネガティブプロンプトは空
+steps: 50
+width: 1024
+height: 1024
+cfg_scale: 3
+distilled_cfg_scale: 5       # shift。省略すると Forge の既定 3.5 になる
+sampler: "Euler"
+scheduler: "simple"
+seed: -1
+batch_count: 1
+batch_size: 1
+override_settings:
+  sd_model_checkpoint: "moss-image_moss_image_sft_bf16"
+  forge_additional_modules:
+    - "qwen3.5_9b_bf16.safetensors"  # text encoder
+    - "flux2-vae.safetensors"        # VAE
+  moss_uncond_skip_layers: "22"      # ネガティブ側でスキップする層。"" で無効
+```
+
+- `distilled_cfg_scale`（CLI では `--distilled-cfg-scale`）は要求の `distilled_cfg_scale` として送られる。Forge では Flux 系の Distilled CFG、MOSS-Image ではシフトとして使われる。書かなければ送らない。
+- `moss_uncond_skip_layers` はネガティブ側（unconditional）の計算でスキップする DiT の層。Forge の既定は `"22"`。`override_settings` は生成後も残る（ADR 0016）ので、前の実行に左右されないよう明示しておく。
+- 効いていれば、生成情報（PNG の `parameters`）に `CFG scale: 3.0, Shift: 5.0` と `Module 1: flux2-vae, Module 2: qwen3.5_9b_bf16` が出る。
 
 SDXL 系の例（`forge_additional_modules` は空配列にして前の系統の残留を防ぐ）：
 
