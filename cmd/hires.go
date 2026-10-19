@@ -25,23 +25,24 @@ Suitable for multi-stage upscaling (high-quality Latent Upscale workflow).`,
 }
 
 var hiresFlags struct {
-	format         string
-	quality        int
-	negativePrompt string
-	steps          int
-	cfgScale       float64
-	sampler        string
-	scheduler      string
-	seed           int64
-	scale          float64
-	denoise        float64
-	upscaler       string
-	output         string
-	paramsFile     string
-	promptFile     string
-	vae            string
-	textEncoder    string
-	model          string
+	format            string
+	quality           int
+	negativePrompt    string
+	steps             int
+	cfgScale          float64
+	distilledCFGScale float64
+	sampler           string
+	scheduler         string
+	seed              int64
+	scale             float64
+	denoise           float64
+	upscaler          string
+	output            string
+	paramsFile        string
+	promptFile        string
+	vae               string
+	textEncoder       string
+	model             string
 }
 
 func init() {
@@ -49,6 +50,7 @@ func init() {
 	f.StringVarP(&hiresFlags.negativePrompt, "negative", "n", "", "negative prompt")
 	f.IntVar(&hiresFlags.steps, "steps", 20, "number of sampling steps")
 	f.Float64Var(&hiresFlags.cfgScale, "cfg-scale", 7.0, "CFG scale")
+	f.Float64Var(&hiresFlags.distilledCFGScale, "distilled-cfg-scale", 0, "Distilled CFG scale; Flux guidance or MOSS-Image shift (default: server default, 3.5 on Forge)")
 	f.StringVar(&hiresFlags.sampler, "sampler", "Euler a", "sampler name")
 	f.StringVar(&hiresFlags.scheduler, "scheduler", "", "scheduler name")
 	f.Int64Var(&hiresFlags.seed, "seed", -1, "seed (-1 for random)")
@@ -160,6 +162,7 @@ func runHires(cmd *cobra.Command, args []string) error {
 			Width:                             newW,
 			Height:                            newH,
 			CFGScale:                          resolveFloat64(cmd, "cfg-scale", hiresFlags.cfgScale, paramCfg.CFGScaleValue()),
+			DistilledCFGScale:                 resolveOptionalFloat64(cmd, "distilled-cfg-scale", hiresFlags.distilledCFGScale, paramCfg.DistilledCFGScaleValue()),
 			SamplerName:                       resolveString(cmd, "sampler", hiresFlags.sampler, paramCfg.SamplerValue()),
 			SchedulerName:                     resolveString(cmd, "scheduler", hiresFlags.scheduler, paramCfg.SchedulerValue()),
 			Seed:                              resolveInt64(cmd, "seed", hiresFlags.seed, paramCfg.SeedValue()),

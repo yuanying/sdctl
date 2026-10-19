@@ -25,6 +25,7 @@ var img2imgFlags struct {
 	width             int
 	height            int
 	cfgScale          float64
+	distilledCFGScale float64
 	sampler           string
 	scheduler         string
 	seed              int64
@@ -46,6 +47,7 @@ func init() {
 	f.IntVar(&img2imgFlags.width, "width", 512, "image width")
 	f.IntVar(&img2imgFlags.height, "height", 512, "image height")
 	f.Float64Var(&img2imgFlags.cfgScale, "cfg-scale", 7.0, "CFG scale")
+	f.Float64Var(&img2imgFlags.distilledCFGScale, "distilled-cfg-scale", 0, "Distilled CFG scale; Flux guidance or MOSS-Image shift (default: server default, 3.5 on Forge)")
 	f.StringVar(&img2imgFlags.sampler, "sampler", "Euler a", "sampler name")
 	f.StringVar(&img2imgFlags.scheduler, "scheduler", "", "scheduler name")
 	f.Int64Var(&img2imgFlags.seed, "seed", -1, "seed (-1 for random)")
@@ -149,6 +151,7 @@ func runImg2Img(cmd *cobra.Command, args []string) error {
 			Width:                             resolveInt(cmd, "width", img2imgFlags.width, paramCfg.WidthValue()),
 			Height:                            resolveInt(cmd, "height", img2imgFlags.height, paramCfg.HeightValue()),
 			CFGScale:                          resolveFloat64(cmd, "cfg-scale", img2imgFlags.cfgScale, paramCfg.CFGScaleValue()),
+			DistilledCFGScale:                 resolveOptionalFloat64(cmd, "distilled-cfg-scale", img2imgFlags.distilledCFGScale, paramCfg.DistilledCFGScaleValue()),
 			SamplerName:                       resolveString(cmd, "sampler", img2imgFlags.sampler, paramCfg.SamplerValue()),
 			SchedulerName:                     resolveString(cmd, "scheduler", img2imgFlags.scheduler, paramCfg.SchedulerValue()),
 			Seed:                              resolveInt64(cmd, "seed", img2imgFlags.seed, paramCfg.SeedValue()),

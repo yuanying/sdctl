@@ -27,6 +27,7 @@ type Txt2ImgRequest struct {
 	Width                             int            `json:"width"`
 	Height                            int            `json:"height"`
 	CFGScale                          float64        `json:"cfg_scale"`
+	DistilledCFGScale                 *float64       `json:"distilled_cfg_scale,omitempty"`
 	SamplerName                       string         `json:"sampler_name,omitempty"`
 	SchedulerName                     string         `json:"scheduler,omitempty"`
 	Seed                              int64          `json:"seed,omitempty"`

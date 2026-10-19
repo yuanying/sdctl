@@ -17,29 +17,30 @@ var txt2imgCmd = &cobra.Command{
 }
 
 var txt2imgFlags struct {
-	format         string
-	quality        int
-	negativePrompt string
-	steps          int
-	width          int
-	height         int
-	cfgScale       float64
-	sampler        string
-	scheduler      string
-	seed           int64
-	batchCount     int
-	batchSize      int
-	output         string
-	paramsFile     string
-	promptFile     string
-	vae            string
-	textEncoder    string
-	model          string
-	hiresFix       bool
-	hrScale        float64
-	hrUpscaler     string
-	hrSteps        int
-	hrDenoise      float64
+	format            string
+	quality           int
+	negativePrompt    string
+	steps             int
+	width             int
+	height            int
+	cfgScale          float64
+	distilledCFGScale float64
+	sampler           string
+	scheduler         string
+	seed              int64
+	batchCount        int
+	batchSize         int
+	output            string
+	paramsFile        string
+	promptFile        string
+	vae               string
+	textEncoder       string
+	model             string
+	hiresFix          bool
+	hrScale           float64
+	hrUpscaler        string
+	hrSteps           int
+	hrDenoise         float64
 }
 
 func init() {
@@ -49,6 +50,7 @@ func init() {
 	f.IntVar(&txt2imgFlags.width, "width", 512, "image width")
 	f.IntVar(&txt2imgFlags.height, "height", 512, "image height")
 	f.Float64Var(&txt2imgFlags.cfgScale, "cfg-scale", 7.0, "CFG scale")
+	f.Float64Var(&txt2imgFlags.distilledCFGScale, "distilled-cfg-scale", 0, "Distilled CFG scale; Flux guidance or MOSS-Image shift (default: server default, 3.5 on Forge)")
 	f.StringVar(&txt2imgFlags.sampler, "sampler", "Euler a", "sampler name")
 	f.StringVar(&txt2imgFlags.scheduler, "scheduler", "", "scheduler name")
 	f.Int64Var(&txt2imgFlags.seed, "seed", -1, "seed (-1 for random)")
@@ -136,6 +138,7 @@ func runTxt2Img(cmd *cobra.Command, args []string) error {
 		Width:                             resolveInt(cmd, "width", txt2imgFlags.width, paramCfg.WidthValue()),
 		Height:                            resolveInt(cmd, "height", txt2imgFlags.height, paramCfg.HeightValue()),
 		CFGScale:                          resolveFloat64(cmd, "cfg-scale", txt2imgFlags.cfgScale, paramCfg.CFGScaleValue()),
+		DistilledCFGScale:                 resolveOptionalFloat64(cmd, "distilled-cfg-scale", txt2imgFlags.distilledCFGScale, paramCfg.DistilledCFGScaleValue()),
 		SamplerName:                       resolveString(cmd, "sampler", txt2imgFlags.sampler, paramCfg.SamplerValue()),
 		SchedulerName:                     resolveString(cmd, "scheduler", txt2imgFlags.scheduler, paramCfg.SchedulerValue()),
 		Seed:                              resolveInt64(cmd, "seed", txt2imgFlags.seed, paramCfg.SeedValue()),
