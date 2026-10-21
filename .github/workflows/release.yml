@@ -1,0 +1,31 @@
+name: Weekly release
+
+# Once a week, release a patch version when the Go module changed since the
+# latest vX.Y.Z tag (see scripts/next-release-tag.sh). Releases carry no
+# binary: sdctl is installed with `go install github.com/yuanying/sdctl@vX.Y.Z`.
+on:
+  schedule:
+    - cron: "0 0 * * 1" # Monday 09:00 JST
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  release:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - id: next
+        run: echo "tag=$(scripts/next-release-tag.sh)" >> "$GITHUB_OUTPUT"
+      # The release creates the tag on the commit it names, so a tag never
+      # exists without its release.
+      - if: steps.next.outputs.tag != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.next.outputs.tag }}
+        run: gh release create "$TAG" --target "$GITHUB_SHA" --title "$TAG" --generate-notes

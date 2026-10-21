@@ -1,0 +1,30 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": "A version is proposed only once it has been public for seven days, so that a release pulled or fixed in its first week never reaches a branch. internalChecksFilter is already strict by default; it is stated so that the wait is read here as holding back the branch and the pull request themselves, not only a status check on them",
+  "extends": ["config:recommended", ":semanticCommitTypeAll(chore)"],
+  "timezone": "Asia/Tokyo",
+  "dependencyDashboard": true,
+  "minimumReleaseAge": "7 days",
+  "internalChecksFilter": "strict",
+  "postUpdateOptions": ["gomodTidy"],
+  "platformAutomerge": false,
+  "packageRules": [
+    {
+      "description": "Patch, digest and pin updates are merged by Renovate itself once the pull request's checks pass. They are the updates that are not meant to change behaviour, and the weekly release picks them up as a patch release. Merging is left to Renovate rather than to GitHub's auto-merge, which this repository does not enable and whose settings are not changed for this. Minor and major updates only open a pull request",
+      "matchUpdateTypes": ["patch", "digest", "pin", "pinDigest"],
+      "automerge": true
+    },
+    {
+      "description": "A new Go minor in the go directive raises the Go every user of go install needs, and CI follows it through go-version-file. It waits for approval on the dashboard; patches flow as usual",
+      "matchManagers": ["gomod"],
+      "matchDepTypes": ["golang", "toolchain"],
+      "matchUpdateTypes": ["major", "minor"],
+      "dependencyDashboardApproval": true
+    },
+    {
+      "description": "Workflows are already read by the github-actions manager. Grouping them keeps a handful of actions from arriving as a handful of pull requests, since they are updated together and reviewed the same way",
+      "matchManagers": ["github-actions"],
+      "groupName": "github-actions"
+    }
+  ]
+}

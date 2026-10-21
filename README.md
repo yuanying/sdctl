@@ -13,6 +13,8 @@ CLI for [AUTOMATIC1111 Stable Diffusion WebUI](https://github.com/AUTOMATIC1111/
 go install github.com/yuanying/sdctl@latest
 ```
 
+Releases are tags with no binary attached; pin one with `@vX.Y.Z`. Every Monday a workflow releases the next patch version when `go.mod`, `go.sum` or any `*.go` file changed since the latest `vX.Y.Z` tag, so dependency updates merged by Renovate reach a release within a week.
+
 ## Configuration
 
 By default, sdctl connects to `http://localhost:7860`.
