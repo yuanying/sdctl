@@ -10,14 +10,39 @@ import (
 
 type Client struct {
 	baseURL    string
+	token      string
 	httpClient *http.Client
 }
 
-func NewClient(baseURL string) *Client {
-	return &Client{
-		baseURL:    baseURL,
-		httpClient: &http.Client{},
+// Option configures a Client.
+type Option func(*Client)
+
+// WithToken sends "Authorization: Bearer <token>" with every request.
+// An empty token sends no Authorization header.
+func WithToken(token string) Option {
+	return func(c *Client) {
+		c.token = token
 	}
+}
+
+func NewClient(baseURL string, opts ...Option) *Client {
+	c := &Client{
+		baseURL: baseURL,
+		httpClient: &http.Client{
+			// A redirect to another host is a login page, not the API: stop there
+			// so the caller reports it instead of failing to decode its HTML.
+			CheckRedirect: func(req *http.Request, via []*http.Request) error {
+				if req.URL.Host != via[0].URL.Host {
+					return http.ErrUseLastResponse
+				}
+				return nil
+			},
+		},
+	}
+	for _, opt := range opts {
+		opt(c)
+	}
+	return c
 }
 
 type Txt2ImgRequest struct {
@@ -99,23 +124,35 @@ func (c *Client) post(path string, body any) (*http.Response, error) {
 	if err != nil {
 		return nil, err
 	}
-	resp, err := c.httpClient.Post(c.baseURL+path, "application/json", bytes.NewReader(data))
+	req, err := http.NewRequest(http.MethodPost, c.baseURL+path, bytes.NewReader(data))
 	if err != nil {
-		return nil, fmt.Errorf("connection refused (%s)", c.baseURL)
+		return nil, err
 	}
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("API error %d: %s", resp.StatusCode, string(body))
-	}
-	return resp, nil
+	req.Header.Set("Content-Type", "application/json")
+	return c.do(req)
 }
 
 func (c *Client) get(path string) (*http.Response, error) {
-	resp, err := c.httpClient.Get(c.baseURL + path)
+	req, err := http.NewRequest(http.MethodGet, c.baseURL+path, nil)
+	if err != nil {
+		return nil, err
+	}
+	return c.do(req)
+}
+
+func (c *Client) do(req *http.Request) (*http.Response, error) {
+	if c.token != "" {
+		req.Header.Set("Authorization", "Bearer "+c.token)
+	}
+	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("connection refused (%s)", c.baseURL)
 	}
 	if resp.StatusCode != http.StatusOK {
+		defer resp.Body.Close()
+		if loc := resp.Header.Get("Location"); loc != "" && resp.StatusCode >= 300 && resp.StatusCode < 400 {
+			return nil, fmt.Errorf("API error %d: redirected to %s (the WebUI may be behind a login; set SDCTL_TOKEN or token in the config file)", resp.StatusCode, loc)
+		}
 		body, _ := io.ReadAll(resp.Body)
 		return nil, fmt.Errorf("API error %d: %s", resp.StatusCode, string(body))
 	}

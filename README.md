@@ -23,6 +23,7 @@ By default, sdctl connects to `http://localhost:7860`.
 
 ```yaml
 url: http://localhost:7860
+token: $SD_WEBUI_TOKEN                # bearer token for a WebUI behind a login (see below)
 params: /path/to/default-params.yaml  # default --params for txt2img / img2img / hires
 output_dir: /path/to/images           # default -o for txt2img / img2img / hires
 format: jpeg                          # default image format: png (default) or jpeg
@@ -34,6 +35,7 @@ jpeg_quality: 90                      # default JPEG quality, 1-100 (default 90)
 | Variable | Config key | Meaning |
 |---|---|---|
 | `SDCTL_URL` | `url` | WebUI URL |
+| `SDCTL_TOKEN` | `token` | Bearer token sent as `Authorization: Bearer <token>` (see below) |
 | `SDCTL_PARAMS` | `params` | Params file used when `--params` is not given |
 | `SDCTL_OUTPUT_DIR` | `output_dir` | Output directory used when `-o` is not given (created if missing) |
 | `SDCTL_FORMAT` | `format` | Image format (`png` or `jpeg`) used when neither `--format` nor the `-o` extension decides it |
@@ -49,8 +51,26 @@ sdctl txt2img "a cat"   # → /path/to/images/output-<YYYYMMDD-HHMMSS>-<n>.png
 Precedence is: command-line flag > environment variable > config file.
 
 - `--params ''` runs without any params file, even if a default is set.
-- Setting `SDCTL_PARAMS=`, `SDCTL_OUTPUT_DIR=`, `SDCTL_FORMAT=` or `SDCTL_JPEG_QUALITY=` (empty) ignores the config file value.
+- Setting `SDCTL_TOKEN=`, `SDCTL_PARAMS=`, `SDCTL_OUTPUT_DIR=`, `SDCTL_FORMAT=` or `SDCTL_JPEG_QUALITY=` (empty) ignores the config file value.
 - Files in the output directory are named `output-<YYYYMMDD-HHMMSS>-<n>.png` (`.jpg` for JPEG). `<n>` skips names that already exist, so runs in the same second never overwrite each other.
+
+- `$VAR` and `${VAR}` in the config file's string values (`url`, `token`, `params`, `output_dir`, `format`) are replaced with environment variables when the file is read; an unset variable becomes empty. There is no escape for a literal `$`.
+
+### Authentication (bearer token)
+
+When the WebUI is behind a proxy that asks for a login, sdctl sends `Authorization: Bearer <token>` with every request if a token is set. Keep the token itself out of the config file: either export `SDCTL_TOKEN`, or name an environment variable in the file.
+
+```yaml
+url: https://sd-webui.example.org
+token: $SD_WEBUI_TOKEN
+```
+
+```bash
+export SD_WEBUI_TOKEN=...   # e.g. from your shell profile or a secret manager
+sdctl models list
+```
+
+Without a token, a request that the proxy redirects to a login page on another host fails with `API error 302: redirected to <login URL>` instead of an HTML decoding error. Redirects within the same host are followed and keep the token.
 
 ### Output
 

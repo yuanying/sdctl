@@ -215,6 +215,16 @@ alwayson_scripts:
 | `SDCTL_FORMAT` | `format` | 画像の形式（`png` / `jpeg`）。`--format` も `-o` の拡張子も無いときに使う。どれも無ければ PNG |
 | `SDCTL_JPEG_QUALITY` | `jpeg_quality` | JPEG の品質（1〜100）。`--quality` を省いたときに使う。どれも無ければ 90 |
 
+接続先と認証は全コマンド共通で、同じく「環境変数 > config.yaml」。
+
+| 環境変数 | config.yaml のキー | 使われる場面 |
+|---|---|---|
+| `SDCTL_URL` | `url` | WebUI の URL。どれも無ければ `http://localhost:7860` |
+| `SDCTL_TOKEN` | `token` | ログインの必要な WebUI に `Authorization: Bearer <token>` で送るトークン |
+
+- config.yaml の文字列の値に書いた `$VAR` / `${VAR}` は読み込むときに環境変数で展開される。トークンはファイルに直接書かず `token: $SD_WEBUI_TOKEN` のように書く。トークンの値を表示したりファイルに書き出したりしない。
+- `API error 302: redirected to <ログインページ>` はトークンが無いとき、`401` はトークンが無効・期限切れのとき。
+
 - 実行前に `echo $SDCTL_PARAMS $SDCTL_OUTPUT_DIR $SDCTL_FORMAT` で既定値を確認できる。
 - 既定の params を使いたくないときは `--params ''` を付ける。別の params を使うときは `--params <file>` を付ける（既定の params とは合成されず、置き換わる）。
 - `-o` を省くと `$SDCTL_OUTPUT_DIR/output-<YYYYMMDD-HHMMSS>-<n>.png`（JPEG のときは `.jpg`）に保存される。同じ秒に何度実行しても上書きされない。
