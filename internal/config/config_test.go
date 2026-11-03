@@ -203,3 +203,92 @@ func TestInvalidJPEGQualityEnvIsError(t *testing.T) {
 		t.Errorf("expected error naming SDCTL_JPEG_QUALITY, got %v", err)
 	}
 }
+
+func TestTokenFromFile(t *testing.T) {
+	unsetEnv(t, "SDCTL_TOKEN")
+	dir := t.TempDir()
+	configFile := filepath.Join(dir, "config.yaml")
+	os.WriteFile(configFile, []byte("token: file-token\n"), 0644)
+
+	cfg, err := config.Load(configFile)
+	if err != nil {
+		t.Fatalf("Load failed: %v", err)
+	}
+	if cfg.Token != "file-token" {
+		t.Errorf("unexpected token: %q", cfg.Token)
+	}
+}
+
+func TestTokenEnvOverridesFile(t *testing.T) {
+	dir := t.TempDir()
+	configFile := filepath.Join(dir, "config.yaml")
+	os.WriteFile(configFile, []byte("token: file-token\n"), 0644)
+
+	t.Setenv("SDCTL_TOKEN", "env-token")
+
+	cfg, err := config.Load(configFile)
+	if err != nil {
+		t.Fatalf("Load failed: %v", err)
+	}
+	if cfg.Token != "env-token" {
+		t.Errorf("env var should override file, got: %q", cfg.Token)
+	}
+}
+
+func TestEmptyTokenEnvIgnoresFile(t *testing.T) {
+	dir := t.TempDir()
+	configFile := filepath.Join(dir, "config.yaml")
+	os.WriteFile(configFile, []byte("token: file-token\n"), 0644)
+
+	t.Setenv("SDCTL_TOKEN", "")
+
+	cfg, err := config.Load(configFile)
+	if err != nil {
+		t.Fatalf("Load failed: %v", err)
+	}
+	if cfg.Token != "" {
+		t.Errorf("empty env var should clear the token, got: %q", cfg.Token)
+	}
+}
+
+func TestFileValuesExpandEnv(t *testing.T) {
+	unsetEnv(t, "SDCTL_URL")
+	unsetEnv(t, "SDCTL_TOKEN")
+	unsetEnv(t, "SDCTL_OUTPUT_DIR")
+	t.Setenv("TEST_SD_HOST", "sd.example.org")
+	t.Setenv("TEST_SD_TOKEN", "expanded-token")
+	t.Setenv("TEST_SD_HOME", "/home/me")
+	dir := t.TempDir()
+	configFile := filepath.Join(dir, "config.yaml")
+	os.WriteFile(configFile, []byte("url: https://${TEST_SD_HOST}\ntoken: $TEST_SD_TOKEN\noutput_dir: $TEST_SD_HOME/images\n"), 0644)
+
+	cfg, err := config.Load(configFile)
+	if err != nil {
+		t.Fatalf("Load failed: %v", err)
+	}
+	if cfg.URL != "https://sd.example.org" {
+		t.Errorf("unexpected URL: %q", cfg.URL)
+	}
+	if cfg.Token != "expanded-token" {
+		t.Errorf("unexpected token: %q", cfg.Token)
+	}
+	if cfg.OutputDir != "/home/me/images" {
+		t.Errorf("unexpected output dir: %q", cfg.OutputDir)
+	}
+}
+
+func TestFileValueWithUnsetEnvExpandsToEmpty(t *testing.T) {
+	unsetEnv(t, "SDCTL_TOKEN")
+	unsetEnv(t, "TEST_SD_UNSET")
+	dir := t.TempDir()
+	configFile := filepath.Join(dir, "config.yaml")
+	os.WriteFile(configFile, []byte("token: $TEST_SD_UNSET\n"), 0644)
+
+	cfg, err := config.Load(configFile)
+	if err != nil {
+		t.Fatalf("Load failed: %v", err)
+	}
+	if cfg.Token != "" {
+		t.Errorf("expected empty token, got: %q", cfg.Token)
+	}
+}

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/yuanying/sdctl/internal/api"
@@ -303,5 +304,87 @@ func TestConnectionError(t *testing.T) {
 	_, err := client.ListModels()
 	if err == nil {
 		t.Fatal("expected error, got nil")
+	}
+}
+
+func TestTokenSentAsBearer(t *testing.T) {
+	var got []string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		got = append(got, r.Method+" "+r.Header.Get("Authorization"))
+		if r.Method == http.MethodPost {
+			json.NewEncoder(w).Encode(api.GenerateResponse{})
+			return
+		}
+		json.NewEncoder(w).Encode([]api.Model{})
+	}))
+	defer server.Close()
+
+	client := api.NewClient(server.URL, api.WithToken("secret"))
+	if _, err := client.ListModels(); err != nil {
+		t.Fatalf("ListModels failed: %v", err)
+	}
+	if _, err := client.Txt2Img(api.Txt2ImgRequest{Prompt: "a cat"}); err != nil {
+		t.Fatalf("Txt2Img failed: %v", err)
+	}
+	want := []string{"GET Bearer secret", "POST Bearer secret"}
+	if len(got) != len(want) || got[0] != want[0] || got[1] != want[1] {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestNoTokenSendsNoAuthorization(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if _, ok := r.Header["Authorization"]; ok {
+			t.Errorf("unexpected Authorization header: %q", r.Header.Get("Authorization"))
+		}
+		json.NewEncoder(w).Encode([]api.Model{})
+	}))
+	defer server.Close()
+
+	for _, client := range []*api.Client{api.NewClient(server.URL), api.NewClient(server.URL, api.WithToken(""))} {
+		if _, err := client.ListModels(); err != nil {
+			t.Fatalf("ListModels failed: %v", err)
+		}
+	}
+}
+
+func TestRedirectToAnotherHostIsReported(t *testing.T) {
+	login := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Errorf("login page should not be followed: %s", r.URL)
+		w.Write([]byte("<html>login</html>"))
+	}))
+	defer login.Close()
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, login.URL+"/login", http.StatusFound)
+	}))
+	defer server.Close()
+
+	_, err := api.NewClient(server.URL).ListModels()
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !strings.Contains(err.Error(), "302") || !strings.Contains(err.Error(), login.URL+"/login") || !strings.Contains(err.Error(), "SDCTL_TOKEN") {
+		t.Errorf("unexpected error: %v", err)
+	}
+}
+
+func TestRedirectOnSameHostIsFollowed(t *testing.T) {
+	var auth string
+	mux := http.NewServeMux()
+	mux.HandleFunc("/sdapi/v1/sd-models", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/moved", http.StatusFound)
+	})
+	mux.HandleFunc("/moved", func(w http.ResponseWriter, r *http.Request) {
+		auth = r.Header.Get("Authorization")
+		json.NewEncoder(w).Encode([]api.Model{})
+	})
+	server := httptest.NewServer(mux)
+	defer server.Close()
+
+	if _, err := api.NewClient(server.URL, api.WithToken("secret")).ListModels(); err != nil {
+		t.Fatalf("ListModels failed: %v", err)
+	}
+	if auth != "Bearer secret" {
+		t.Errorf("token should survive a same-host redirect, got %q", auth)
 	}
 }

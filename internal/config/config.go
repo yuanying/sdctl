@@ -10,6 +10,9 @@ import (
 
 type Config struct {
 	URL string `yaml:"url"`
+	// Token is sent as "Authorization: Bearer <token>" when the WebUI is behind
+	// an authenticating proxy. Empty means no Authorization header.
+	Token string `yaml:"token"`
 	// Params is the default generation parameter file used when --params is not given.
 	Params string `yaml:"params"`
 	// OutputDir is the default output directory used when -o is not given.
@@ -36,12 +39,20 @@ func Load(path string) (*Config, error) {
 		if err := yaml.Unmarshal(data, cfg); err != nil {
 			return nil, err
 		}
+		// $VAR and ${VAR} in the file's values are replaced with environment
+		// variables, so a secret such as the token can stay out of the file.
+		for _, v := range []*string{&cfg.URL, &cfg.Token, &cfg.Params, &cfg.OutputDir, &cfg.Format} {
+			*v = os.ExpandEnv(*v)
+		}
 	}
 
 	if url := os.Getenv("SDCTL_URL"); url != "" {
 		cfg.URL = url
 	}
 	// An environment variable set to an empty string disables the config file default.
+	if token, ok := os.LookupEnv("SDCTL_TOKEN"); ok {
+		cfg.Token = token
+	}
 	if params, ok := os.LookupEnv("SDCTL_PARAMS"); ok {
 		cfg.Params = params
 	}
