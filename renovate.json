@@ -1,7 +1,7 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "description": "Patch, digest and pinning updates are the ones not meant to change behaviour; Renovate merges them once the pull request's checks pass, and the weekly release picks them up as a patch release. GitHub's auto-merge is not enabled here and its settings are not changed for this",
-  "extends": ["github>yuanying/renovate-config", "github>yuanying/renovate-config:automerge-patch"],
+  "description": "Every update gets GitHub's auto-merge and is merged once a code owner in .github/CODEOWNERS approves it and the pull request's checks pass, and the weekly release picks up what was merged as a patch release",
+  "extends": ["github>yuanying/renovate-config", "github>yuanying/renovate-config:platform-automerge"],
   "postUpdateOptions": ["gomodTidy"],
   "packageRules": [
     {
