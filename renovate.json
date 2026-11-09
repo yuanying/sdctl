@@ -1,8 +1,8 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "description": "Every update gets GitHub's auto-merge and is merged once a code owner in .github/CODEOWNERS approves it and the pull request's checks pass, and the weekly release picks up what was merged as a patch release",
+  "description": "Every update gets GitHub's auto-merge and is merged once a code owner in .github/CODEOWNERS approves it and the pull request's checks pass, and the weekly release picks up what was merged as a patch release. gomodTidy runs go mod tidy after every Go update, and gomodUpdateImportPaths lets a major Go module update rewrite the import paths; without it Renovate skips go mod tidy on major updates and leaves go.mod untidy",
   "extends": ["github>yuanying/renovate-config", "github>yuanying/renovate-config:platform-automerge"],
-  "postUpdateOptions": ["gomodTidy"],
+  "postUpdateOptions": ["gomodTidy", "gomodUpdateImportPaths"],
   "packageRules": [
     {
       "description": "A new Go minor in the go directive raises the Go every user of go install needs, and CI follows it through go-version-file. It waits for approval on the dashboard; patches flow as usual",
